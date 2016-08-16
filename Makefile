@@ -13,6 +13,7 @@ CPP_SOURCES := \
 	\
 	./ffmpeg/ffmpeg.cc \
 	./ffmpeg/input_container.cc \
+	./ffmpeg/output_container.cc \
 
 
 CPP_OBJECTS := $(CPP_SOURCES:.cc=.o)
