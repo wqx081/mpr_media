@@ -114,6 +114,8 @@ class TimeDelta final {
     return delta_ >= other.delta_;
   }
 
+  int64_t ToInternalValue() const { return delta_; }
+
  private:
   explicit TimeDelta(int64_t delta) : delta_(delta) {}
 

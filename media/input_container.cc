@@ -1,5 +1,5 @@
-#include "ffmpeg/container.h"
-#include "ffmpeg/ffmpeg.h"
+#include "media/container.h"
+#include "media/ffmpeg.h"
 
 #include "base/status.h"
 

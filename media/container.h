@@ -1,6 +1,6 @@
 #ifndef MEDIA_FFMPEG_CONTAINER_H_
 #define MEDIA_FFMPEG_CONTAINER_H_
-#include "ffmpeg/ffmpeg.h"
+#include "media/ffmpeg.h"
 
 #include "base/macros.h"
 #include "base/status.h"

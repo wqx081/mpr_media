@@ -157,4 +157,7 @@ template <typename T, size_t N> char (&ArraySizeHelper(T (&array)[N]))[N];
 
 #define GUARDED_BY(mutex)
 
+#define ALIGNAS(byte_alignment) __attribute__((aligned(byte_alignment)))
+#define ALIGNOF(type) __alignof__(type)
+
 #endif  // BASE_MACROS_H_

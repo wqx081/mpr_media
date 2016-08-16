@@ -1,4 +1,4 @@
-#include "ffmpeg/ffmpeg.h"
+#include "media/ffmpeg.h"
 
 #include <gtest/gtest.h>
 #include <glog/logging.h>
