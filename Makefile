@@ -11,6 +11,7 @@ CPP_SOURCES := \
 	./base/status.cc \
 	./base/string_piece.cc \
 	./base/string_util.cc \
+	./base/string_printf.cc \
 	./base/time.cc \
 	./base/callback_helpers.cc \
 	./base/callback_internal.cc \
@@ -35,6 +36,9 @@ CPP_SOURCES := \
 	./media/bit_reader.cc \
 	./media/audio/sample_rates.cc \
 	./media/audio/audio_decoder_config.cc \
+	./media/audio/audio_parameters.cc \
+	./media/audio/audio_decoder.cc \
+	./media/audio/audio_bus.cc \
 	./media/clock.cc \
 	\
 	./media/audio/channel_layout.cc \
@@ -51,6 +55,7 @@ TESTS := ./media/ffmpeg_unittest \
 	./media/data_buffer_unittest \
 	./media/ranges_unittest \
 	./media/bit_reader_unittest \
+	./media/audio/audio_bus_unittest \
 
 all: $(CPP_OBJECTS) $(TESTS)
 
@@ -123,6 +128,15 @@ all: $(CPP_OBJECTS) $(TESTS)
 ./media/bit_reader_unittest.o: ./media/bit_reader_unittest.cc
 	@echo "  [CXX]  $@"
 	@$(CXX) $(CXXFLAGS) $@ $<
+
+./media/audio/audio_bus_unittest: ./media/audio/audio_bus_unittest.o
+	@echo "  [LINK] $@"
+	@$(CXX) -o $@ $< $(CPP_OBJECTS) $(BASE_LIB_FILES) \
+		$(TEST_LIB_FILES) $(FFMPEG_LIB_FILES)
+./media/audio/audio_bus_unittest.o: ./media/audio/audio_bus_unittest.cc
+	@echo "  [CXX]  $@"
+	@$(CXX) $(CXXFLAGS) $@ $<
+
 
 clean:
 	rm media/*.o

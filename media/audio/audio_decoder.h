@@ -1,22 +1,17 @@
-// Copyright (c) 2012 The Chromium Authors. All rights reserved.
-// Use of this source code is governed by a BSD-style license that can be
-// found in the LICENSE file.
-
 #ifndef MEDIA_BASE_AUDIO_DECODER_H_
 #define MEDIA_BASE_AUDIO_DECODER_H_
 
 #include "base/callback.h"
-#include "base/memory/ref_counted.h"
-#include "media/base/channel_layout.h"
-#include "media/base/pipeline_status.h"
-#include "media/base/media_export.h"
+#include "base/ref_counted.h"
+#include "media/audio/channel_layout.h"
+#include "media/pipeline_status.h"
 
 namespace media {
 
 class Buffer;
 class DemuxerStream;
 
-class MEDIA_EXPORT AudioDecoder
+class AudioDecoder
     : public base::RefCountedThreadSafe<AudioDecoder> {
  public:
   // Status codes for read operations.
@@ -29,7 +24,7 @@ class MEDIA_EXPORT AudioDecoder
   // Initialize an AudioDecoder with the given DemuxerStream, executing the
   // callback upon completion.
   // statistics_cb is used to update global pipeline statistics.
-  virtual void Initialize(const scoped_refptr<DemuxerStream>& stream,
+  virtual void Initialize(const scoped_ref_ptr<DemuxerStream>& stream,
                           const PipelineStatusCB& status_cb,
                           const StatisticsCB& statistics_cb) = 0;
 
@@ -43,7 +38,7 @@ class MEDIA_EXPORT AudioDecoder
   // indicate the end of the stream. A NULL buffer pointer indicates an aborted
   // Read(). This can happen if the DemuxerStream gets flushed and doesn't have
   // any more data to return.
-  typedef base::Callback<void(Status, const scoped_refptr<Buffer>&)> ReadCB;
+  typedef base::Callback<void(Status, const scoped_ref_ptr<Buffer>&)> ReadCB;
   virtual void Read(const ReadCB& read_cb) = 0;
 
   // Reset decoder state, dropping any queued encoded data.
