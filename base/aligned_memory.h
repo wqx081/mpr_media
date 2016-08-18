@@ -1,7 +1,3 @@
-// Copyright (c) 2012 The Chromium Authors. All rights reserved.
-// Use of this source code is governed by a BSD-style license that can be
-// found in the LICENSE file.
-
 // AlignedMemory is a POD type that gives you a portable way to specify static
 // or local stack data of a given alignment and size. For example, if you need
 // static storage for a class, but you want manual control over when the object
@@ -26,18 +22,20 @@
 //   // ... later, to release the memory:
 //   AlignedFree(my_array);
 //
-// Or using scoped_ptr_malloc:
+// Or using unique_ptr:
 //
-//   scoped_ptr_malloc<float, ScopedPtrAlignedFree> my_array(
+//   std::unique_ptr<float, AlignedFreeDeleter> my_array(
 //       static_cast<float*>(AlignedAlloc(size, alignment)));
 
 #ifndef BASE_MEMORY_ALIGNED_MEMORY_H_
 #define BASE_MEMORY_ALIGNED_MEMORY_H_
 
-
-#include "base/macros.h"
+#include <stddef.h>
+#include <stdint.h>
 
 #include <stdlib.h>
+
+#include "base/macros.h"
 
 namespace base {
 
@@ -46,25 +44,26 @@ namespace base {
 template <size_t Size, size_t ByteAlignment>
 struct AlignedMemory {};
 
-#define BASE_DECL_ALIGNED_MEMORY(byte_alignment) \
-    template <size_t Size> \
-    class AlignedMemory<Size, byte_alignment> { \
-     public: \
-      ALIGNAS(byte_alignment) uint8_t data_[Size]; \
-      void* void_data() { return static_cast<void*>(data_); } \
-      const void* void_data() const { \
-        return static_cast<const void*>(data_); \
-      } \
-      template<typename Type> \
-      Type* data_as() { return static_cast<Type*>(void_data()); } \
-      template<typename Type> \
-      const Type* data_as() const { \
-        return static_cast<const Type*>(void_data()); \
-      } \
-     private: \
-      void* operator new(size_t); \
-      void operator delete(void*); \
-    }
+#define BASE_DECL_ALIGNED_MEMORY(byte_alignment)                              \
+  template <size_t Size>                                                      \
+  class AlignedMemory<Size, byte_alignment> {                                 \
+   public:                                                                    \
+    ALIGNAS(byte_alignment) uint8_t data_[Size];                              \
+    void* void_data() { return static_cast<void*>(data_); }                   \
+    const void* void_data() const { return static_cast<const void*>(data_); } \
+    template <typename Type>                                                  \
+    Type* data_as() {                                                         \
+      return static_cast<Type*>(void_data());                                 \
+    }                                                                         \
+    template <typename Type>                                                  \
+    const Type* data_as() const {                                             \
+      return static_cast<const Type*>(void_data());                           \
+    }                                                                         \
+                                                                              \
+   private:                                                                   \
+    void* operator new(size_t);                                               \
+    void operator delete(void*);                                              \
+  }
 
 // Specialization for all alignments is required because MSVC (as of VS 2008)
 // does not understand ALIGNAS(ALIGNOF(Type)) or ALIGNAS(template_param).
@@ -92,9 +91,9 @@ inline void AlignedFree(void* ptr) {
   free(ptr);
 }
 
-// Helper class for use with scoped_ptr_malloc.
-class ScopedPtrAlignedFree {
- public:
+// Deleter for use with unique_ptr. E.g., use as
+//   std::unique_ptr<Foo, base::AlignedFreeDeleter> foo;
+struct AlignedFreeDeleter {
   inline void operator()(void* ptr) const {
     AlignedFree(ptr);
   }

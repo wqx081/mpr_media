@@ -1,10 +1,15 @@
+// Copyright (c) 2012 The Chromium Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+#include "media/base/ranges.h"
+
+#include <stddef.h>
+
 #include <sstream>
 
-#include "media/ranges.h"
-
-#include "base/string_piece.h"
-
-#include <gtest/gtest.h>
+#include "base/strings/string_piece.h"
+#include "testing/gtest/include/gtest/gtest.h"
 
 namespace media {
 

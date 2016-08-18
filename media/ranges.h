@@ -1,6 +1,9 @@
 #ifndef MEDIA_BASE_RANGES_H_
 #define MEDIA_BASE_RANGES_H_
 
+#include <stddef.h>
+#include <stdint.h>
+
 #include <algorithm>
 #include <ostream>
 #include <vector>
@@ -13,7 +16,7 @@ namespace media {
 // Ranges allows holding an ordered list of ranges of [start,end) intervals.
 // The canonical example use-case is holding the list of ranges of buffered
 // bytes or times in a <video> tag.
-template<class T>  // Endpoint type; typically a base::TimeDelta or an int64.
+template <class T>  // Endpoint type; typically a base::TimeDelta or an int64_t.
 class Ranges {
  public:
   // Allow copy & assign.
@@ -26,8 +29,8 @@ class Ranges {
   size_t size() const;
 
   // Return the "i"'th range's start & end (0-based).
-  T start(int i) const;
-  T end(int i) const;
+  T start(size_t i) const;
+  T end(size_t i) const;
 
   // Clear all ranges.
   void clear();
@@ -112,12 +115,12 @@ size_t Ranges<T>::size() const {
 }
 
 template<class T>
-T Ranges<T>::start(int i) const {
+T Ranges<T>::start(size_t i) const {
   return ranges_[i].first;
 }
 
 template<class T>
-T Ranges<T>::end(int i) const {
+T Ranges<T>::end(size_t i) const {
   return ranges_[i].second;
 }
 

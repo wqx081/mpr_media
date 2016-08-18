@@ -1,8 +1,11 @@
 #ifndef MEDIA_BASE_DECODER_BUFFER_QUEUE_H_
 #define MEDIA_BASE_DECODER_BUFFER_QUEUE_H_
 
+#include <stddef.h>
+
 #include <deque>
 
+#include "base/macros.h"
 #include "base/ref_counted.h"
 #include "base/time.h"
 
@@ -46,6 +49,9 @@ class DecoderBufferQueue {
   // Returns zero if the queue is empty.
   base::TimeDelta Duration();
 
+  // Returns the total size of buffers inside the queue.
+  size_t data_size() const { return data_size_; }
+
  private:
   typedef std::deque<scoped_ref_ptr<DecoderBuffer> > Queue;
   Queue queue_;
@@ -56,6 +62,9 @@ class DecoderBufferQueue {
   Queue in_order_queue_;
 
   base::TimeDelta earliest_valid_timestamp_;
+
+  // Total size in bytes of buffers in the queue.
+  size_t data_size_;
 
   DISALLOW_COPY_AND_ASSIGN(DecoderBufferQueue);
 };

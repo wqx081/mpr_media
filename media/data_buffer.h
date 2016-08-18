@@ -1,49 +1,40 @@
-// A simple implementation of Buffer that takes ownership of the given data
-// pointer.
-//
-// DataBuffer assumes that memory was allocated with new uint8_t[].
+#ifndef MEDIA_DATA_BUFFER_H_
+#define MEDIA_DATA_BUFFER_H_
+#include <stdint.h>
+#include <memory>
 
-#ifndef MEDIA_BASE_DATA_BUFFER_H_
-#define MEDIA_BASE_DATA_BUFFER_H_
-
+#include "base/macros.h"
 #include "base/ref_counted.h"
-#include "media/buffers.h"
+#include "base/time.h"
 
 namespace media {
 
-class DataBuffer : public Buffer {
+class DataBuffer : public base::RefCountedThreadSafe<DataBuffer> {
  public:
-  // Assumes valid data of size |buffer_size|.
+  explicit DataBuffer(int buffer_size);
   DataBuffer(std::unique_ptr<uint8_t[]> buffer, int buffer_size);
 
-  // Allocates buffer of size |buffer_size|. If |buffer_size| is 0, |data_| is
-  // set to a NULL ptr.
-  explicit DataBuffer(int buffer_size);
+  static scoped_ref_ptr<DataBuffer> CopyFrom(const uint8_t* data, int size);
+  static scoped_ref_ptr<DataBuffer> CreateEOSBuffer();
 
-  // Allocates buffer of size |data_size|, copies [data,data+data_size) to
-  // the allocated buffer and sets data size to |data_size|.
+  base::TimeDelta timestamp() const;
+  void set_timestamp(const base::TimeDelta& timestamp);
+  base::TimeDelta duration() const;
+  void set_duration(const base::TimeDelta& duration);
+  const uint8_t* data() const;
+  uint8_t* writable_data();
+
+  bool end_of_stream() const;
+
+ private:
+  friend class base::RefCountedThreadSafe<DataBuffer>;
+
   DataBuffer(const uint8_t* data, int data_size);
-
-  // Buffer implementation.
-  virtual const uint8_t* GetData() const override;
-  virtual int GetDataSize() const override;
-
-  // Returns a read-write pointer to the buffer data.
-  virtual uint8_t* GetWritableData();
-
-  // Updates the size of valid data in bytes, which must be less than or equal
-  // to GetBufferSize().
-  virtual void SetDataSize(int data_size);
-
-  // Returns the size of the underlying buffer.
-  virtual int GetBufferSize() const;
-
- protected:
   virtual ~DataBuffer();
 
  private:
-  // Constructor helper method for memory allocations.
-  void Initialize();
+  base::TimeDelta timestamp_;
+  base::TimeDelta duration_;
 
   std::unique_ptr<uint8_t[]> data_;
   int buffer_size_;
@@ -52,6 +43,5 @@ class DataBuffer : public Buffer {
   DISALLOW_COPY_AND_ASSIGN(DataBuffer);
 };
 
-}  // namespace media
-
-#endif  // MEDIA_BASE_DATA_BUFFER_H_
+} // namespace media
+#endif // MEDIA_DATA_BUFFER_H_

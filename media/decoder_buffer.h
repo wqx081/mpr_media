@@ -1,67 +1,153 @@
-// A specialized buffer for interfacing with audio / video decoders.
-//
-// Specifically ensures that data is aligned and padded as necessary by the
-// underlying decoding framework.  On desktop platforms this means memory is
-// allocated using FFmpeg with particular alignment and padding requirements.
-//
-// Also includes decoder specific functionality for decryption.
+#ifndef MEDIA_DECODER_BUFFER_H_
+#define MEDIA_DECODER_BUFFER_H_
 
-#ifndef MEDIA_BASE_DECODER_BUFFER_H_
-#define MEDIA_BASE_DECODER_BUFFER_H_
+#include <stddef.h>
+#include <stdint.h>
 
+#include <memory>
+#include <string>
+#include <utility>
+
+#include "base/macros.h"
+#include "base/aligned_memory.h"
 #include "base/ref_counted.h"
-#include "media/buffers.h"
-//#include "media/decrypt_config.h"
+#include "base/time.h"
+#include "media/timestamp_constants.h"
+
 
 namespace media {
 
-class DecoderBuffer : public Buffer {
+class DecoderBuffer
+    : public base::RefCountedThreadSafe<DecoderBuffer> {
  public:
+
   enum {
-    kPaddingSize = 16,
+    kPaddingSize = 32,
     kAlignmentSize = 32
   };
 
-  // Allocates buffer of size |buffer_size| >= 0.  Buffer will be padded and
-  // aligned as necessary.
-  explicit DecoderBuffer(int buffer_size);
+  explicit DecoderBuffer(size_t size);
 
-  // Create a DecoderBuffer whose |data_| is copied from |data|.  Buffer will be
-  // padded and aligned as necessary.  |data| must not be NULL and |size| >= 0.
-  static scoped_ref_ptr<DecoderBuffer> CopyFrom(const uint8_t* data, int size);
-
-  // Create a DecoderBuffer indicating we've reached end of stream.  GetData()
-  // and GetWritableData() will return NULL and GetDataSize() will return 0.
+  static scoped_ref_ptr<DecoderBuffer> CopyFrom(const uint8_t* data,
+                                                size_t size);
+  static scoped_ref_ptr<DecoderBuffer> CopyFrom(const uint8_t* data,
+                                                size_t size,
+                                                const uint8_t* side_data,
+                                                size_t side_data_size);  
   static scoped_ref_ptr<DecoderBuffer> CreateEOSBuffer();
 
-  // Buffer implementation.
-  virtual const uint8_t* GetData() const override;
-  virtual int GetDataSize() const override;
+  base::TimeDelta timestamp() const {
+    DCHECK(!end_of_stream());
+    return timestamp_;
+  }  
 
-  // Returns a read-write pointer to the buffer data.
-  virtual uint8_t* GetWritableData();
+  virtual void set_timestamp(base::TimeDelta timestamp);
+  
+  base::TimeDelta duration() const {
+    DCHECK(!end_of_stream());
+    return duration_;
+  }
 
-  //virtual const DecryptConfig* GetDecryptConfig() const;
-  //virtual void SetDecryptConfig(scoped_ptr<DecryptConfig> decrypt_config);
+  void set_duration(base::TimeDelta duration) {
+    DCHECK(!end_of_stream());
+    DCHECK(duration == kNoTimestamp ||
+                      (duration >= base::TimeDelta() && duration != kInfiniteDuration))
+        << duration.InSecondsF();
+    duration_ = duration;
+  }
+
+  const uint8_t* data() const {
+    DCHECK(!end_of_stream());
+    return data_.get();
+  }
+
+  uint8_t* writable_data() const {
+    DCHECK(!end_of_stream());
+    return data_.get();
+  }
+
+  size_t data_size() const {
+    DCHECK(!end_of_stream());
+    return size_;
+  }
+
+  const uint8_t* side_data() const {
+    DCHECK(!end_of_stream());
+    return side_data_.get();
+  }
+
+  size_t side_data_size() const {
+    DCHECK(!end_of_stream());
+    return side_data_size_;
+  }
+
+  typedef std::pair<base::TimeDelta, base::TimeDelta> DiscardPadding;
+  const DiscardPadding& discard_padding() const {
+    DCHECK(!end_of_stream());
+    return discard_padding_;
+  }
+
+  void set_discard_padding(const DiscardPadding& discard_padding) {
+    DCHECK(!end_of_stream());
+    discard_padding_ = discard_padding;
+  }
+
+  bool end_of_stream() const {
+    return data_ == NULL;
+  }
+
+  base::TimeDelta splice_timestamp() const {
+    DCHECK(!end_of_stream());
+    return splice_timestamp_;
+  } 
+  
+  void set_splice_timestamp(base::TimeDelta splice_timestamp) {
+    DCHECK(!end_of_stream());
+    splice_timestamp_ = splice_timestamp;
+  } 
+  
+  bool is_key_frame() const {
+    DCHECK(!end_of_stream());
+    return is_key_frame_;
+  } 
+  
+  void set_is_key_frame(bool is_key_frame) {
+    DCHECK(!end_of_stream());
+    is_key_frame_ = is_key_frame;
+  } 
+  
+  std::string AsHumanReadableString();
+  
+  void CopySideDataFrom(const uint8_t* side_data, size_t side_data_size);
+  
+
 
  protected:
-  // Allocates a buffer of size |size| >= 0 and copies |data| into it.  Buffer
-  // will be padded and aligned as necessary.  If |data| is NULL then |data_| is
-  // set to NULL and |buffer_size_| to 0.
-  DecoderBuffer(const uint8_t* data, int size);
+  friend class base::RefCountedThreadSafe<DecoderBuffer>;
+  
+  DecoderBuffer(const uint8_t* data,
+                size_t size,
+                const uint8_t* side_data,
+                size_t side_data_size);
   virtual ~DecoderBuffer();
 
  private:
-  int buffer_size_;
-  uint8_t* data_;
-  //scoped_ref_ptr<DecryptConfig> decrypt_config_;
+  base::TimeDelta timestamp_;
+  base::TimeDelta duration_;
 
-  // Constructor helper method for memory allocations.
+  size_t size_;
+  std::unique_ptr<uint8_t, base::AlignedFreeDeleter> data_;
+  size_t side_data_size_;
+  std::unique_ptr<uint8_t, base::AlignedFreeDeleter> side_data_;
+  //DECRYPT
+  DiscardPadding discard_padding_;
+  base::TimeDelta splice_timestamp_;
+  bool is_key_frame_;
+
   void Initialize();
 
   DISALLOW_COPY_AND_ASSIGN(DecoderBuffer);
 };
 
-}  // namespace media
-
-#endif  // MEDIA_BASE_DECODER_BUFFER_H_
+} // namespace media
+#endif // MEDIA_DECODER_BUFFER_H_

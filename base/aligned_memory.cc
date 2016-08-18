@@ -1,6 +1,8 @@
 #include "base/aligned_memory.h"
 
+
 #include <glog/logging.h>
+
 
 namespace base {
 
@@ -15,8 +17,8 @@ void* AlignedAlloc(size_t size, size_t alignment) {
   // crash if we encounter a failed allocation; maintaining consistent behavior
   // with a normal allocation failure in Chrome.
   if (!ptr) {
-  //  DLOG(ERROR) << "If you crashed here, your aligned allocation is incorrect: "
-   //             << "size=" << size << ", alignment=" << alignment;
+    DLOG(ERROR) << "If you crashed here, your aligned allocation is incorrect: "
+                << "size=" << size << ", alignment=" << alignment;
     CHECK(false);
   }
   // Sanity check alignment just to be safe.

@@ -40,6 +40,7 @@ flags = [
 '-Werror',
 #'-Wc++98-compat',
 '-Wno-long-long',
+'-Wno-deprecated-declarations',
 '-Wno-variadic-macros',
 '-fexceptions',
 '-DNDEBUG',

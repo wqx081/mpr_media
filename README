@@ -1,1 +1,196 @@
 src-25.0.1365.85
+
+ffmpeg 
+-loglevel panic 
+
+-i test.mp4 
+
+-codec:v libx264 # MAIN OPTIONS
+-codec:a libfaac # MAIN OPTIONS
+  # -codec[:stream_specifier] CODEC (input/output,per-stream)
+  # Select an encoder or a decoder for one or more streams.
+  # CODEC is the name of a decoder/encoder or a special value COPY (only only) to indicate
+  # that the stream is not to be reencoded.
+  # ffmpeg -i INPUT -map 0 -c:v libx264 -c:a copy OUTPUT
+  # ffmpeg -i INPUT -map 0 -c copy -c:v 1 libx264 -c:a:137 libvorbis OUTPUT
+  #
+
+-ar 48000 # AUDIO OPTIONS
+          # -ar[:stream_specifier] FREQ (input/output,per-stream)
+          #
+          # Set the audio sampling frequency. 
+          # For output streams it is set by default to the frequency of the corresponding
+          # input stream.
+          # 
+
+-r 25  # VIDEO OPTIONS
+       # -r[:stream_specifier] FPS (input/output,per-stream)
+       # Set frame rate 
+       #
+       # As an input option, ignore any timestamps stored in the file and instead generate
+       # timestamps assuming constant frame rate FPS.
+       #
+       # As an output option, duplicate or drop input frames to achieve constant output
+       # frame rate FPS.
+       #
+
+-ab 64k 
+
+-s 320x240 # VIDEO OPTIONS
+           #
+           # -s[:stream_specifier] size (input/output,per-stream)
+           # Set frame size
+           #
+           # As an input option, this is shortcut for the VIDEO_SIZE private option,
+           # recognized by some demuxers for which the frame size is either not stored
+           # in the file or is configurable - e.g. raw video or video grabbers.
+           #
+           # As an output option, this inserts the SCALE video filter to the end of the
+           # corresponding filtergraph. Please use the SCALE filter directly to insert
+           # it at the beginning or some other place.
+
+-aspect 4:3 # VIDEO OPTIONS
+            #
+            # -aspect[:stream_specifier] ASPECT (output,per-stream)
+            # Set the video display aspect ratio specified by ASPECT.
+            # ASPECT can be floating point number string, or a string of the form NUM.DEN,
+            # where NUM and DEN are the numerator and denominator of the aspect ratio.
+            # For example "4:3", "16:9", "1.3333", and "1.7777" are valid argument values.
+            
+-b:v 800k 
+
+-flags +loop # Enable loop filter.
+             # -flags -loop Disable loop filter.
+             
+-partitions +parti4x4+partip8x8+partb8x8 
+           # One of H.264's most useful features is the ability to choose among 
+           # many combinations of inter and intra partitions. 
+           # P-macroblocks can be subdivided into 16x8, 8x16, 8x8, 4x8, 8x4, and 4x4 
+           # partitions. 
+           # B-macroblocks can be divided into 16x8, 8x16, and 8x8 partitions. 
+           # I-macroblocks can be divided into 4x4 or 8x8 partitions. 
+           # Analyzing more partition options improves quality at the cost of speed. 
+           # The default is to analyze all partitions except p4x4 (p8x8, i8x8, i4x4, b8x8), 
+           # since p4x4 is not particularly useful except at high bitrates and 
+           # lower resolutions. Note that i8x8 requires 8x8dct, 
+           # and is therefore a High Profile-only partition. 
+           # p8x8 is the most costly, speed-wise, of the partitions, 
+           # but also gives the most benefit. Generally, whenever possible, 
+           # all partition types except p4x4 should be used.
+
+-subq 5 
+           # 1: Fastest, but extremely low quality. 
+           #    Should be avoided except on first pass encoding.
+           #
+           # 2-5: Progressively better and slower, 
+           #      5 serves as a good medium for higher speed encoding.
+           #
+           # 6-7: 6 is the default. 
+           # Activates rate-distortion optimization for partition decision. 
+           # This can considerably improve efficiency, though it has a notable speed cost. 
+           # 6 activates it in I/P frames, and subme7 activates it in B frames.
+           #
+           # 8-9: Activates rate-distortion refinement, 
+           # which uses RDO to refine both motion vectors and intra prediction modes. 
+           # Slower than subme 6, but again, more efficient.
+           #
+           # An extremely important encoding parameter which determines 
+           # what algorithms are used for both subpixel motion searching 
+           # and partition decision.
+
+-trellis 1 
+           # 0: disabled
+           # 1: enabled only on the final encode of a MB
+           # 2: enabled on all mode decisions
+           #
+           # The main decision made in quantization is which coefficients to 
+           # round up and which to round down. 
+           # Trellis chooses the optimal rounding choices for the maximum 
+           # rate-distortion score, to maximize PSNR relative to bitrate. 
+           # This generally increases quality relative to bitrate by about 5% 
+           # for a somewhat small speed cost. It should generally be enabled. 
+           # Note that trellis requires CABAC.
+
+-refs 1    # One of H.264's most useful features is the abillity to reference frames 
+           # other than the one immediately prior to the current frame. 
+           # This parameter lets one specify how many references can be used, 
+           # through a maximum of 16. 
+           # Increasing the number of refs increases the DPB (Decoded Picture Buffer) 
+           # requirement, which means hardware playback devices will often 
+           # have strict limits to the number of refs they can handle. 
+           # In live-action sources, more reference have limited use beyond 4-8, 
+           # but in cartoon sources up to the maximum value of 16 is often useful. 
+           # More reference frames require more processing power because 
+           # every frame is searched by the motion search 
+           # (except when an early skip decision is made). 
+           # The slowdown is especially apparent with slower motion 
+           # estimation methods. Recommended default: -refs 6
+
+-coder 0   # CABAC is the default entropy encoder used by x264. 
+           # Though somewhat slower on both the decoding and encoding end, 
+           # it offers 10-15% improved compression on live-action sources and 
+           # considerably higher improvements on animated sources, 
+           # especially at low bitrates. 
+           # It is also required for the use of trellis quantization. 
+           # Disabling CABAC may somewhat improve decoding performance, 
+           # especially at high bitrates. CABAC is not allowed in Baseline Profile. 
+           # Recommended default: -coder 1 (CABAC enabled)
+
+-me_range 16  # MErange controls the max range of the motion search. 
+              # For HEX and DIA, this is clamped to between 4 and 16, 
+              # with a default of 16. 
+              # For UMH and ESA, it can be increased beyond the default 16 to 
+              # allow for a wider-range motion search, 
+              # which is useful on HD footage and for high-motion footage. 
+              # Note that for UMH and ESA, increasing MErange will 
+              # significantly slow down encoding.
+
+-minrate 800k 
+
+-maxrate 800k # Specifies the maximum bitrate at any point in the video.
+              # Requests the VBV buffersize to be set. This option is generally used
+              # when encoding for a piece of hardware with bitrate limitations.
+
+-bufsize 800k # Depends on the profile level of the video being encoded.
+              # Set only if you're encoding for a hardware device.
+
+-rc_eq 'blurCplx^(1-qComp)' 
+           # -rc_eq <string>
+           # Ratecontrol equation. Recommended default: -rc_eq 'blurCplx^(1-qComp)'
+
+-qcomp 0.6 # QP curve compression: 0.0 => CBR, 1.0 => CQP. Recommended default: -qcomp 0.60
+
+-qmin 10   # Minimum quantizer. Doesn't need to be changed. Recommended default: -qmin 10
+-qmax 51   # Maximum quantizer. Doesn't nedd to be changed. Recommended default: -qmax 53
+
+-qdiff 4   # Set max QP step. Recommended default: -qdiff 4
+
+-bt 200k   # Allowed variance of average bitrate
+
+-i_qfactor 0.71 # Qscale different between I-frames and P-frames. 
+                # Note: -i_qfactor is handled a little differently than -ipratio.
+                # Recommended: -i_qfactor 0.71
+
+-level 30 
+
+-keyint_min 25  # Minimum GOP length, the minimum distance between I-frames. 
+                # Recommended default: 25
+
+-g 25  # Keyframe interval, also known as GOP length. 
+       # This determines the maximum distance between I-frames. 
+       # Very high GOP lengths will result in slightly more efficient compression, 
+       # but will make seeking in the video somewhat more difficult. 
+       # Recommended default: 250
+
+-sc_threshold 40 # Adjusts the sensitivity of x264's scenecut detection. 
+                 # Rarely needs to be adjusted. Recommended default: 40
+
+-async 2 
+
+-map 0 
+-f ssegment 
+-segment_time 10 
+-segment_list_entry_prefix "http://172.16.2.129:80/media" 
+-segment_list test.m3u8 
+-segment_list_flags +live 
+-segment_format mpegts my%05d.ts 

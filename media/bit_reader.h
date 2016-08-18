@@ -1,60 +1,56 @@
 #ifndef MEDIA_BASE_BIT_READER_H_
 #define MEDIA_BASE_BIT_READER_H_
 
-#include <sys/types.h>
+#include <stdint.h>
 
 #include "base/macros.h"
-#include <glog/logging.h>
+#include "media/bit_reader_core.h"
 
 namespace media {
 
-// A class to read bit streams.
-class BitReader {
+class BitReader
+    : private BitReaderCore::ByteStreamProvider  {
  public:
   // Initialize the reader to start reading at |data|, |size| being size
   // of |data| in bytes.
-  BitReader(const uint8_t* data, off_t size);
-  ~BitReader();
+  BitReader(const uint8_t* data, int size);
+  ~BitReader() override;
 
-  // Read |num_bits| next bits from stream and return in |*out|, first bit
-  // from the stream starting at |num_bits| position in |*out|.
-  // |num_bits| cannot be larger than the bits the type can hold.
-  // Return false if the given number of bits cannot be read (not enough
-  // bits in the stream), true otherwise. When return false, the stream will
-  // enter a state where further ReadBits/SkipBits operations will always
-  // return false unless |num_bits| is 0. The type |T| has to be a primitive
-  // integer type.
-  template<typename T> bool ReadBits(int num_bits, T *out) {
-    DCHECK_LE(num_bits, static_cast<int>(sizeof(T) * 8));
-    uint64_t temp;
-    bool ret = ReadBitsInternal(num_bits, &temp);
-    *out = static_cast<T>(temp);
-    return ret;
+  template<typename T> bool ReadBits(int num_bits, T* out) {
+    return bit_reader_core_.ReadBits(num_bits, out);
+  }
+
+  bool ReadFlag(bool* flag) {
+    return bit_reader_core_.ReadFlag(flag);
+  }
+
+  bool SkipBits(int num_bits) {
+    return bit_reader_core_.SkipBits(num_bits);
+  }
+
+  int bits_available() const {
+    return initial_size_ * 8 - bits_read();
+  }
+
+  int bits_read() const {
+    return bit_reader_core_.bits_read();
   }
 
  private:
-  // Help function used by ReadBits to avoid inlining the bit reading logic.
-  bool ReadBitsInternal(int num_bits, uint64_t* out);
+  // BitReaderCore::ByteStreamProvider implementation.
+  int GetBytes(int max_n, const uint8_t** out) override;
 
-  // Advance to the next byte, loading it into curr_byte_.
-  // If the num_remaining_bits_in_curr_byte_ is 0 after this function returns,
-  // the stream has reached the end.
-  void UpdateCurrByte();
+  // Total number of bytes that was initially passed to BitReader.
+  const int initial_size_;
 
-  // Pointer to the next unread (not in curr_byte_) byte in the stream.
+  // Pointer to the next unread byte in the stream.
   const uint8_t* data_;
 
-  // Bytes left in the stream (without the curr_byte_).
-  off_t bytes_left_;
+  // Bytes left in the stream.
+  int bytes_left_;
 
-  // Contents of the current byte; first unread bit starting at position
-  // 8 - num_remaining_bits_in_curr_byte_ from MSB.
-  uint8_t curr_byte_;
+  BitReaderCore bit_reader_core_;
 
-  // Number of bits remaining in curr_byte_
-  int num_remaining_bits_in_curr_byte_;
-
- private:
   DISALLOW_COPY_AND_ASSIGN(BitReader);
 };
 

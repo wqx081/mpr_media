@@ -1,61 +1,104 @@
 #include "media/decoder_buffer.h"
 
-#include <glog/logging.h>
-#include "base/aligned_memory.h"
-
 namespace media {
 
-DecoderBuffer::DecoderBuffer(int buffer_size)
-    : Buffer(base::TimeDelta(), base::TimeDelta()),
-      buffer_size_(buffer_size) {
+static uint8_t* AllocateFFmpegSafeBlock(size_t size) {
+  uint8_t* const block = reinterpret_cast<uint8_t*>(base::AlignedAlloc(
+      size + DecoderBuffer::kPaddingSize, DecoderBuffer::kAlignmentSize));
+  memset(block + size, 0, DecoderBuffer::kPaddingSize);
+  return block;
+}
+
+DecoderBuffer::DecoderBuffer(size_t size)
+    : size_(size), side_data_size_(0), is_key_frame_(false) {
   Initialize();
 }
 
-DecoderBuffer::DecoderBuffer(const uint8_t* data, int buffer_size)
-    : Buffer(base::TimeDelta(), base::TimeDelta()),
-      buffer_size_(buffer_size) {
-  // Prevent invalid allocations.  Also used to create end of stream buffers.
+DecoderBuffer::DecoderBuffer(const uint8_t* data,
+                             size_t size,
+                             const uint8_t* side_data,
+                             size_t side_data_size)
+    : size_(size), side_data_size_(side_data_size), is_key_frame_(false) {
   if (!data) {
-    buffer_size_ = 0;
-    data_ = NULL;
+    CHECK_EQ(size_, 0u);
+    CHECK(!side_data);
     return;
   }
 
   Initialize();
-  memcpy(data_, data, buffer_size_);
+
+  memcpy(data_.get(), data, size_);
+
+  if (!side_data) {
+    CHECK_EQ(side_data_size, 0u);
+    return;
+  }
+
+  DCHECK_GT(side_data_size_, 0u);
+  memcpy(side_data_.get(), side_data, side_data_size_);
 }
 
-DecoderBuffer::~DecoderBuffer() {
-  base::AlignedFree(data_);
-}
+DecoderBuffer::~DecoderBuffer() {}
 
 void DecoderBuffer::Initialize() {
-  DCHECK_GE(buffer_size_, 0);
-  data_ = reinterpret_cast<uint8_t*>(
-      base::AlignedAlloc(buffer_size_ + kPaddingSize, kAlignmentSize));
-  memset(data_ + buffer_size_, 0, kPaddingSize);
+  data_.reset(AllocateFFmpegSafeBlock(size_));
+  if (side_data_size_ > 0)
+    side_data_.reset(AllocateFFmpegSafeBlock(side_data_size_));
+  splice_timestamp_ = kNoTimestamp;
 }
 
 scoped_ref_ptr<DecoderBuffer> DecoderBuffer::CopyFrom(const uint8_t* data,
-                                                     int data_size) {
-  DCHECK(data);
-  return make_scoped_ref_ptr(new DecoderBuffer(data, data_size));
+                                                      size_t data_size) {
+  CHECK(data);
+  return make_scoped_ref_ptr(new DecoderBuffer(data, data_size, NULL, 0));
+}
+
+scoped_ref_ptr<DecoderBuffer> DecoderBuffer::CopyFrom(const uint8_t* data,
+                                                      size_t data_size,
+                                                      const uint8_t* side_data,
+                                                      size_t side_data_size) {
+  CHECK(data);
+  CHECK(side_data);
+  return make_scoped_ref_ptr(new DecoderBuffer(data, data_size,
+                                               side_data, side_data_size));
 }
 
 scoped_ref_ptr<DecoderBuffer> DecoderBuffer::CreateEOSBuffer() {
-  return make_scoped_ref_ptr(new DecoderBuffer(NULL, 0));
+  return make_scoped_ref_ptr(new DecoderBuffer(NULL, 0, NULL, 0));
 }
 
-const uint8_t* DecoderBuffer::GetData() const {
-  return data_;
+std::string DecoderBuffer::AsHumanReadableString() {
+  if (end_of_stream()) {
+    return "end of stream";
+  }
+
+  std::ostringstream s;
+  s << "timestamp: " << timestamp_.InMicroseconds()
+    << " duration: " << duration_.InMicroseconds()
+    << " size: " << size_
+    << " side_data_size: " << side_data_size_
+    << " is_key_frame: " << is_key_frame_
+    << " discard_padding (ms): (" << discard_padding_.first.InMilliseconds()
+    << ", " << discard_padding_.second.InMilliseconds() << ")";
+
+  return s.str();
 }
 
-int DecoderBuffer::GetDataSize() const {
-  return buffer_size_;
+void DecoderBuffer::set_timestamp(base::TimeDelta timestamp) {
+  DCHECK(!end_of_stream());
+  timestamp_ = timestamp;
 }
 
-uint8_t* DecoderBuffer::GetWritableData() {
-  return data_;
+void DecoderBuffer::CopySideDataFrom(const uint8_t* side_data,
+                                     size_t side_data_size) {
+  if (side_data_size > 0) {
+    side_data_size_ = side_data_size;
+    side_data_.reset(AllocateFFmpegSafeBlock(side_data_size_));
+    memcpy(side_data_.get(), side_data, side_data_size_);
+  } else {
+    side_data_.reset();
+    side_data_size_ = 0;
+  }
 }
 
-}  // namespace media
+} // namespace media

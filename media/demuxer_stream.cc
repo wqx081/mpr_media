@@ -4,4 +4,10 @@ namespace media {
 
 DemuxerStream::~DemuxerStream() {}
 
-}  // namespace media
+DemuxerStream::Liveness DemuxerStream::liveness() const {
+  return DemuxerStream::LIVENESS_UNKNOWN;
+}
+
+void DemuxerStream::EnableBitstreamConverter() {}
+
+} // namespace media
