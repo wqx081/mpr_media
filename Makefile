@@ -43,6 +43,7 @@ CPP_SOURCES := \
 	./media/demuxer_stream.cc \
 	./media/input_stream.cc \
 	./media/file_input_stream.cc \
+	./media/memory_input_stream.cc \
 
 
 CPP_OBJECTS := $(CPP_SOURCES:.cc=.o)
