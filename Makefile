@@ -44,6 +44,10 @@ CPP_SOURCES := \
 	./media/input_stream.cc \
 	./media/file_input_stream.cc \
 	./media/memory_input_stream.cc \
+	\
+	\
+	./c/command_line.cc \
+	./c/parse_option.cc \
 
 
 CPP_OBJECTS := $(CPP_SOURCES:.cc=.o)
