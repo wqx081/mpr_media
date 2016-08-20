@@ -46,17 +46,29 @@ CPP_SOURCES := \
 	./media/memory_input_stream.cc \
 	\
 	\
-	./c/command_line.cc \
-	./c/parse_option.cc \
-
 
 CPP_OBJECTS := $(CPP_SOURCES:.cc=.o)
 
+C_SOURCES := ./c/cmdutils.c \
+	./c/ffmpeg_opt.c \
+	./c/ffmpeg_filter.c \
+	./c/ffmpeg.c \
+
+C_OBJECTS := $(C_SOURCES:.c=.o)
+
+CFLAGS += -I.
+CFLAGS += -Werror -Wno-deprecated-declarations -g -c -o
+
+CC=gcc
+
+.c.o:
+	@echo "  [CC]  $@"
+	@$(CC) $(CFLAGS) $@ $<
 
 TESTS :=  \
 	./ffmpeg/demuxing_decoding_c \
 
-all: $(CPP_OBJECTS) $(TESTS)
+all: $(C_OBJECTS) $(CPP_OBJECTS) $(TESTS)
 
 
 .cc.o:
@@ -74,6 +86,7 @@ all: $(CPP_OBJECTS) $(TESTS)
 
 
 clean:
-	rm media/*.o
-	rm base/*.o
-	rm $(TESTS)
+	rm -fr media/*.o
+	rm -fr base/*.o
+	rm -fr c/*.o
+	rm -fr $(TESTS)
