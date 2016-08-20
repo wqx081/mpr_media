@@ -1,16 +1,22 @@
 #ifndef C_FFMPEG_API_H_
 #define C_FFMPEG_API_H_
 
-enum FFmpegStatus {
-  OK = 0,
+typedef enum FFmpegStatus {
+  STATUS_OK = 0,
   // For option parser
-  INVALID_ARGUMENT,
-  // For Decoder
-  DECODER_AUDIO_ERROR,
-  DECODER_VIDEO_ERROR,
-  // TODO
-};
+  STATUS_NO_FILE_SPECIFIED,
+  STATUS_NO_OUTPUT_FILE,
 
-int FFmpegTranscode(int argc, char** argv);
+  STATUS_INVALID_ARGUMENT,
+  // For Decoder
+  STATUS_DECODER_AUDIO_ERROR,
+  STATUS_DECODER_VIDEO_ERROR,
+
+  STATUS_TRANSCODE_ERROR,
+  // TODO
+} FFmpegStatus;
+
+void InitializeFFmpeg();
+FFmpegStatus FFmpegTranscode(int argc, char** argv);
 
 #endif // C_FFMPEG_API_H_

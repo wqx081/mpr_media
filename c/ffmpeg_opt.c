@@ -1,5 +1,7 @@
 #include <stdint.h>
 
+#include "c/ffmpeg_api.h"
+
 #include "ffmpeg.h"
 #include "cmdutils.h"
 
@@ -3026,7 +3028,7 @@ static int open_files(OptionGroupList *l, const char *inout,
     return 0;
 }
 
-int ffmpeg_parse_options(int argc, char **argv)
+FFmpegStatus ffmpeg_parse_options(int argc, char **argv)
 {
     OptionParseContext octx;
     uint8_t error[128];
@@ -3083,7 +3085,8 @@ fail:
         av_strerror(ret, error, sizeof(error));
         av_log(NULL, AV_LOG_FATAL, "%s\n", error);
     }
-    return ret;
+    //return ret;
+    return STATUS_INVALID_ARGUMENT;
 }
 
 static int opt_progress(void *optctx, const char *opt, const char *arg)

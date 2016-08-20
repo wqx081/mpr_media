@@ -2,6 +2,47 @@
 
 namespace base {
 
+const char kWhitespaceASCII[] = {
+  0x09,    // CHARACTER TABULATION
+  0x0A,    // LINE FEED (LF)
+  0x0B,    // LINE TABULATION
+  0x0C,    // FORM FEED (FF)
+  0x0D,    // CARRIAGE RETURN (CR)
+  0x20,    // SPACE
+  0
+};
+
+
+namespace { 
+
+template<typename StringType>
+StringType ToLowerASCIIImpl(BasicStringPiece<StringType> str) { 
+  StringType ret;
+  ret.reserve(str.size());
+  for (size_t i = 0; i < str.size(); i++)
+    ret.push_back(ToLowerASCII(str[i]));
+  return ret;
+}
+
+template<typename StringType>
+StringType ToUpperASCIIImpl(BasicStringPiece<StringType> str) { 
+  StringType ret;
+  ret.reserve(str.size());
+  for (size_t i = 0; i < str.size(); i++)
+    ret.push_back(ToUpperASCII(str[i]));
+  return ret;
+}
+
+}  // namespace
+
+std::string ToLowerASCII(StringPiece str) { 
+  return ToLowerASCIIImpl<std::string>(str);
+}
+
+std::string ToUpperASCII(StringPiece str) { 
+  return ToUpperASCIIImpl<std::string>(str);
+}
+
 template<typename Str>
 inline static bool DoLowerCaseEqualsASCII(BasicStringPiece<Str> str,
                                                StringPiece lowercase_ascii) {
@@ -151,6 +192,16 @@ StringPiece TrimString(StringPiece input,
                        const StringPiece& trim_chars,
                        TrimPositions positions) {
   return TrimStringPieceT(input, trim_chars, positions);
+}
+
+TrimPositions TrimWhitespaceASCII(const std::string& input,
+                                  TrimPositions positions,
+                                  std::string* output) {
+  return TrimStringT(input, StringPiece(kWhitespaceASCII), positions, output);
+}
+
+StringPiece TrimWhitespaceASCII(StringPiece input, TrimPositions positions) {
+  return TrimStringPieceT(input, StringPiece(kWhitespaceASCII), positions);
 }
 
 } // namespace base

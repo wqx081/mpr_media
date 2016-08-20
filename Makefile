@@ -1,5 +1,5 @@
 CXXFLAGS += -I.
-CXXFLAGS += -Wno-deprecated-declarations -std=c++11 -g -c -o
+CXXFLAGS += -Wno-write-strings -Wno-deprecated-declarations -std=c++11 -g -c -o
 
 BASE_LIB_FILES := -lglog -lgflags -lm
 FFMPEG_LIB_FILES := -lavcodec -lavdevice -lavformat -lavfilter -lavutil
@@ -46,6 +46,7 @@ CPP_SOURCES := \
 	./media/memory_input_stream.cc \
 	\
 	\
+	./cc/command_line.cc \
 
 CPP_OBJECTS := $(CPP_SOURCES:.cc=.o)
 
@@ -67,6 +68,7 @@ CC=gcc
 
 TESTS :=  \
 	./ffmpeg/demuxing_decoding_c \
+	./cc/command_line_unittest \
 
 all: $(C_OBJECTS) $(CPP_OBJECTS) $(TESTS)
 
@@ -84,6 +86,13 @@ all: $(C_OBJECTS) $(CPP_OBJECTS) $(TESTS)
 	@echo "  [CXX]  $@"
 	@$(CXX) $(CXXFLAGS) $@ $<
 
+./cc/command_line_unittest: ./cc/command_line_unittest.o
+	@echo "  [LINK] $@"
+	@$(CXX) -o $@ $< $(CPP_OBJECTS) $(BASE_LIB_FILES) \
+		$(TEST_LIB_FILES) $(FFMPEG_LIB_FILES)
+./cc/command_line_unittest.o: ./cc/command_line_unittest.cc
+	@echo "  [CXX]  $@"
+	@$(CXX) $(CXXFLAGS) $@ $<
 
 clean:
 	rm -fr media/*.o

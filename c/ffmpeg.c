@@ -19,6 +19,8 @@
 #include <unistd.h>
 #endif
 
+#include "c/ffmpeg_api.h"
+
 #include "libavformat/avformat.h"
 #include "libavdevice/avdevice.h"
 #include "libswresample/swresample.h"
@@ -4102,7 +4104,7 @@ static int transcode_step(void)
 /*
  * The following code is the main loop of the file converter
  */
-static int transcode(void)
+static FFmpegStatus transcode(void)
 {
     int ret, i;
     AVFormatContext *os;
@@ -4110,6 +4112,8 @@ static int transcode(void)
     InputStream *ist;
     int64_t timer_start;
     int64_t total_packets_written = 0;
+
+    FFmpegStatus status = STATUS_OK;
 
     ret = transcode_init();
     if (ret < 0)
@@ -4190,8 +4194,9 @@ static int transcode(void)
     }
 
     if (!total_packets_written && (abort_on_flags & ABORT_ON_FLAG_EMPTY_OUTPUT)) {
-        av_log(NULL, AV_LOG_FATAL, "Empty output\n");
-        exit_program(1);
+        //av_log(NULL, AV_LOG_FATAL, "Empty output\n");
+        //exit_program(1);
+        return STATUS_NO_OUTPUT_FILE;
     }
 
     /* close each decoder */
@@ -4207,7 +4212,8 @@ static int transcode(void)
     av_buffer_unref(&hw_device_ctx);
 
     /* finished ! */
-    ret = 0;
+    //ret = 0;
+    status = STATUS_OK;
 
  fail:
 #if HAVE_PTHREADS
@@ -4235,7 +4241,8 @@ static int transcode(void)
             }
         }
     }
-    return ret;
+    //return ret;
+    return status;
 }
 
 
@@ -4349,3 +4356,45 @@ int main(int argc, char **argv)
     return main_return_code;
 }
 #endif
+
+// wqx
+void InitializeFFmpeg() {
+  avcodec_register_all();
+  avdevice_register_all();
+  avfilter_register_all();
+  av_register_all();
+  avformat_network_init();
+}
+
+FFmpegStatus FFmpegTranscode(int argc, char** argv) {
+
+  FFmpegStatus status;
+  int64_t ti;
+
+  //register_exit(ffmpeg_cleanup);
+
+  status = ffmpeg_parse_options(argc, argv);
+  if (status != STATUS_OK) {
+    //ffmpeg_cleanup();
+    return status;
+  }
+
+  if (nb_output_files <= 9 && nb_input_files == 0) {
+    return STATUS_NO_FILE_SPECIFIED;  
+  }
+
+  // File converter / grab
+  if (nb_output_files <= 0) {
+    return STATUS_NO_OUTPUT_FILE;
+  }
+
+  current_time = ti = getutime();
+
+  // status = transcode()
+  ti = getutime() - ti;
+
+  // LOG << "bench: utime=%0.3fs\n" << ti / 1000000.0;
+  //   
+  return STATUS_OK;
+}
+

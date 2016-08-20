@@ -14,9 +14,19 @@
 
 namespace base {
 
+extern const char kWhitespaceASCII[];
+
 inline char ToLowerASCII(char c) {
   return (c >= 'A' && c <= 'Z') ? (c + ('a' - 'A')) : c;
 }
+
+inline char ToUpperASCII(char c) {
+  return (c >= 'a' && c <= 'z') ? (c + ('A' - 'a')) : c;
+}
+
+std::string ToLowerASCII(StringPiece str);
+std::string ToUpperASCII(StringPiece str);
+
 
 template<typename Char> struct CaseInsensitiveCompareASCII {
  public:
@@ -57,6 +67,12 @@ bool TrimString(const std::string& input,
 StringPiece TrimString(StringPiece input,
                        const StringPiece& trim_chars,
                        TrimPositions positions);
+
+TrimPositions TrimWhitespaceASCII(const std::string& input,
+                                  TrimPositions positions,
+                                  std::string* output);
+StringPiece TrimWhitespaceASCII(StringPiece input,
+                                TrimPositions positions);
 
 } // namespace
 #endif // BASE_STRING_UTIL_H_
