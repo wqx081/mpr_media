@@ -16,6 +16,34 @@ namespace base {
 
 extern const char kWhitespaceASCII[];
 
+template <typename Char>
+inline bool IsAsciiWhitespace(Char c) {
+  return c == ' ' || c == '\r' || c == '\n' || c == '\t';
+}
+template <typename Char>
+inline bool IsAsciiAlpha(Char c) {
+  return (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z');
+}
+template <typename Char>
+inline bool IsAsciiUpper(Char c) {
+  return c >= 'A' && c <= 'Z';
+}
+template <typename Char>
+inline bool IsAsciiLower(Char c) {
+  return c >= 'a' && c <= 'z';
+}                   
+template <typename Char>
+inline bool IsAsciiDigit(Char c) {
+  return c >= '0' && c <= '9';
+}                   
+                    
+template <typename Char> 
+inline bool IsHexDigit(Char c) {
+  return (c >= '0' && c <= '9') ||
+         (c >= 'A' && c <= 'F') ||
+         (c >= 'a' && c <= 'f');
+} 
+
 inline char ToLowerASCII(char c) {
   return (c >= 'A' && c <= 'Z') ? (c + ('a' - 'A')) : c;
 }

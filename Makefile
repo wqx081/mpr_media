@@ -1,8 +1,20 @@
+APP:=./bin/FFmpeg
+
 CXXFLAGS += -I.
 CXXFLAGS += -Wno-write-strings -Wno-deprecated-declarations -std=c++11 -g -c -o
 
 BASE_LIB_FILES := -lglog -lgflags -lm
-FFMPEG_LIB_FILES := -lavcodec -lavdevice -lavformat -lavfilter -lavutil
+FFMPEG_LIB_FILES := \
+	-lavcodec \
+	-lavdevice \
+	-lavformat \
+	-lavfilter \
+	-lavutil \
+	-lswresample \
+	-lswscale \
+	-lpostproc \
+	-lm \
+	-lpthread
 TEST_LIB_FILES := -L/usr/local/lib -lgtest -lgtest_main -lpthread
 
 CXX=g++
@@ -17,6 +29,9 @@ CPP_SOURCES := \
 	./base/string_piece.cc \
 	./base/string_util.cc \
 	./base/string_printf.cc \
+	./base/string_split.cc \
+	./base/numbers.cc \
+	./base/ascii_ctype.cc \
 	./base/time.cc \
 	./base/callback_helpers.cc \
 	./base/callback_internal.cc \
@@ -28,37 +43,34 @@ CPP_SOURCES := \
 	./base/memory_mapped_file_posix.cc \
 	./base/lazy_instance.cc \
 	./base/lock.cc \
-	\
-	./ffmpeg/ffmpeg_common.cc \
-	./ffmpeg/ffmpeg_glue.cc \
-	\
-	./media/bit_reader_core.cc \
-	./media/bit_reader.cc \
-	./media/container_names.cc \
-	./media/ranges.cc \
-	\
-	./media/decoder_buffer.cc \
-	./media/decoder_buffer_queue.cc \
-	./media/demuxer_stream_provider.cc \
-	./media/demuxer_stream.cc \
-	./media/input_stream.cc \
-	./media/file_input_stream.cc \
-	./media/memory_input_stream.cc \
+	./base/command_line.cc \
+	./base/environment.cc \
+	./base/file_descriptor_shuffle.cc \
 	\
 	\
-	./cc/command_line.cc \
+	./base/process/internal_linux.cc \
+	./base/process/process_handle.cc \
+	./base/process/process_iterator.cc \
+	./base/process/process_iterator_linux.cc \
+	./base/process/kill.cc \
+	./base/process/kill_posix.cc \
+	./base/process/process_posix.cc \
+	./base/process/process_linux.cc \
+	./base/process/launch.cc \
+	./base/process/launch_posix.cc \
+	./base/test/multiprocess_func_list.cc \
+	\
 
 CPP_OBJECTS := $(CPP_SOURCES:.cc=.o)
 
 C_SOURCES := ./c/cmdutils.c \
 	./c/ffmpeg_opt.c \
 	./c/ffmpeg_filter.c \
-	./c/ffmpeg.c \
 
 C_OBJECTS := $(C_SOURCES:.c=.o)
 
 CFLAGS += -I.
-CFLAGS += -Werror -Wno-deprecated-declarations -g -c -o
+CFLAGS += -Werror -Wno-unused-result -Wno-deprecated-declarations -g -c -o
 
 CC=gcc
 
@@ -67,30 +79,37 @@ CC=gcc
 	@$(CC) $(CFLAGS) $@ $<
 
 TESTS :=  \
-	./ffmpeg/demuxing_decoding_c \
-	./cc/command_line_unittest \
+	./base/process/process_unittest \
+	./base/command_line_unittest \
 
-all: $(C_OBJECTS) $(CPP_OBJECTS) $(TESTS)
+all: $(C_OBJECTS) $(APP) $(CPP_OBJECTS) $(TESTS)
 
 
 .cc.o:
-	@echo "  [CXX]  $@"
+	@echo "  [CC]  $@"
 	@$(CXX) $(CXXFLAGS) $@ $<
 
 
-./ffmpeg/demuxing_decoding_c: ./ffmpeg/demuxing_decoding_c.o
+$(APP): ./c/ffmpeg.o
+	@echo "  [LINK] $@"
+	@$(CC) -o $@  $< $(C_OBJECTS) $(FFMPEG_LIB_FILES)
+./c/ffmpeg.o: ./c/ffmpeg.c
+	@echo "  [CC]  $@"
+	@$(CC) $(CFLAGS) $@ $<
+
+./base/command_line_unittest: ./base/command_line_unittest.o
 	@echo "  [LINK] $@"
 	@$(CXX) -o $@ $< $(CPP_OBJECTS) $(BASE_LIB_FILES) \
 		$(TEST_LIB_FILES) $(FFMPEG_LIB_FILES)
-./ffmpeg/demuxing_decoding_c.o: ./ffmpeg/demuxing_decoding_c.cc
+./base/command_line_unittest.o: ./base/command_line_unittest.cc
 	@echo "  [CXX]  $@"
 	@$(CXX) $(CXXFLAGS) $@ $<
 
-./cc/command_line_unittest: ./cc/command_line_unittest.o
+./base/process/process_unittest: ./base/process/process_unittest.o
 	@echo "  [LINK] $@"
 	@$(CXX) -o $@ $< $(CPP_OBJECTS) $(BASE_LIB_FILES) \
 		$(TEST_LIB_FILES) $(FFMPEG_LIB_FILES)
-./cc/command_line_unittest.o: ./cc/command_line_unittest.cc
+./base/process/process_unittest.o: ./base/process/process_unittest.cc
 	@echo "  [CXX]  $@"
 	@$(CXX) $(CXXFLAGS) $@ $<
 

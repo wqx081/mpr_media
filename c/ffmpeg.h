@@ -560,7 +560,7 @@ int ist_in_filtergraph(FilterGraph *fg, InputStream *ist);
 FilterGraph *init_simple_filtergraph(InputStream *ist, OutputStream *ost);
 int init_complex_filtergraph(FilterGraph *fg);
 
-FFmpegStatus ffmpeg_parse_options(int argc, char **argv);
+int ffmpeg_parse_options(int argc, char **argv);
 
 int vdpau_init(AVCodecContext *s);
 int dxva2_init(AVCodecContext *s);
@@ -572,5 +572,28 @@ int vaapi_decode_init(AVCodecContext *avctx);
 int vaapi_device_init(const char *device);
 int cuvid_init(AVCodecContext *s);
 int cuvid_transcode_init(OutputStream *ost);
+
+static inline int mid_pred(int a, int b, int c)
+{
+      int i=b;
+      __asm__ (
+          "cmp    %2, %1 \n\t"
+          "cmovg  %1, %0 \n\t"
+          "cmovg  %2, %1 \n\t"
+          "cmp    %3, %1 \n\t"
+          "cmovl  %3, %1 \n\t"
+          "cmp    %1, %0 \n\t"
+          "cmovg  %1, %0 \n\t"
+          :"+&r"(i), "+&r"(a)
+          :"r"(b), "r"(c)
+      );
+      return i;
+}
+
+#ifdef DEBUG
+#   define ff_dlog(ctx, ...) av_log(ctx, AV_LOG_DEBUG, __VA_ARGS__)
+#else
+#   define ff_dlog(ctx, ...) do { if (0) av_log(ctx, AV_LOG_DEBUG, __VA_ARGS__); } while (0)
+#endif
 
 #endif /* FFMPEG_H */

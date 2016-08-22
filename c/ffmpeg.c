@@ -19,8 +19,6 @@
 #include <unistd.h>
 #endif
 
-#include "c/ffmpeg_api.h"
-
 #include "libavformat/avformat.h"
 #include "libavdevice/avdevice.h"
 #include "libswresample/swresample.h"
@@ -29,24 +27,21 @@
 #include "libavutil/parseutils.h"
 #include "libavutil/samplefmt.h"
 #include "libavutil/fifo.h"
-//#include "libavutil/internal.h"
 #include "libavutil/intreadwrite.h"
 #include "libavutil/dict.h"
 #include "libavutil/mathematics.h"
 #include "libavutil/pixdesc.h"
 #include "libavutil/avstring.h"
-//#include "libavutil/libm.h"
 #include "libavutil/imgutils.h"
 #include "libavutil/timestamp.h"
 #include "libavutil/bprint.h"
 #include "libavutil/time.h"
 #include "libavutil/threadmessage.h"
-//#include "libavcodec/mathops.h"
-//#include "libavformat/os_support.h"
 
 # include "libavfilter/avfilter.h"
 # include "libavfilter/buffersrc.h"
 # include "libavfilter/buffersink.h"
+
 
 #if HAVE_SYS_RESOURCE_H
 #include <sys/time.h>
@@ -195,12 +190,11 @@ static void sub2video_push_ref(InputStream *ist, int64_t pts)
 {
     AVFrame *frame = ist->sub2video.frame;
     int i;
-    int ret;
 
     av_assert1(frame->data[0]);
     ist->sub2video.last_pts = frame->pts = pts;
     for (i = 0; i < ist->nb_filters; i++)
-        ret = av_buffersrc_add_frame_flags(ist->filters[i]->filter, frame,
+        av_buffersrc_add_frame_flags(ist->filters[i]->filter, frame,
                                      AV_BUFFERSRC_FLAG_KEEP_REF |
                                      AV_BUFFERSRC_FLAG_PUSH);
 }
@@ -271,11 +265,11 @@ static void sub2video_heartbeat(InputStream *ist, int64_t pts)
 static void sub2video_flush(InputStream *ist)
 {
     int i;
-    int ret;
+
     if (ist->sub2video.end_pts < INT64_MAX)
         sub2video_update(ist, NULL);
     for (i = 0; i < ist->nb_filters; i++)
-        ret = av_buffersrc_add_frame(ist->filters[i]->filter, NULL);
+        av_buffersrc_add_frame(ist->filters[i]->filter, NULL);
 }
 
 /* end of sub2video hack */
@@ -1655,10 +1649,15 @@ static void print_report(int is_last_report, int64_t timer_start, int64_t cur_ti
         const char end = is_last_report ? '\n' : '\r';
         if (print_stats==1 && AV_LOG_INFO > av_log_get_level()) {
             fprintf(stderr, "%s    %c", buf, end);
-        } else
-            av_log(NULL, AV_LOG_INFO, "%s    %c", buf, end);
+        } else {
+            //TODO(wqx):
+            fprintf(stdout, "%s    %c\n", buf, end);
+            //av_log(NULL, AV_LOG_INFO, "%s    %c", buf, end);
+        }
 
-    fflush(stderr);
+    //TODO(wqx):
+    //fflush(stderr);
+    fflush(stdout);
     }
 
     if (progress_avio) {
@@ -4104,7 +4103,7 @@ static int transcode_step(void)
 /*
  * The following code is the main loop of the file converter
  */
-static FFmpegStatus transcode(void)
+static int transcode(void)
 {
     int ret, i;
     AVFormatContext *os;
@@ -4112,8 +4111,6 @@ static FFmpegStatus transcode(void)
     InputStream *ist;
     int64_t timer_start;
     int64_t total_packets_written = 0;
-
-    FFmpegStatus status = STATUS_OK;
 
     ret = transcode_init();
     if (ret < 0)
@@ -4194,9 +4191,8 @@ static FFmpegStatus transcode(void)
     }
 
     if (!total_packets_written && (abort_on_flags & ABORT_ON_FLAG_EMPTY_OUTPUT)) {
-        //av_log(NULL, AV_LOG_FATAL, "Empty output\n");
-        //exit_program(1);
-        return STATUS_NO_OUTPUT_FILE;
+        av_log(NULL, AV_LOG_FATAL, "Empty output\n");
+        exit_program(1);
     }
 
     /* close each decoder */
@@ -4212,8 +4208,7 @@ static FFmpegStatus transcode(void)
     av_buffer_unref(&hw_device_ctx);
 
     /* finished ! */
-    //ret = 0;
-    status = STATUS_OK;
+    ret = 0;
 
  fail:
 #if HAVE_PTHREADS
@@ -4241,8 +4236,7 @@ static FFmpegStatus transcode(void)
             }
         }
     }
-    //return ret;
-    return status;
+    return ret;
 }
 
 
@@ -4286,7 +4280,6 @@ static void log_callback_null(void *ptr, int level, const char *fmt, va_list vl)
 {
 }
 
-#if 0
 int main(int argc, char **argv)
 {
     int ret;
@@ -4355,46 +4348,3 @@ int main(int argc, char **argv)
     exit_program(received_nb_signals ? 255 : main_return_code);
     return main_return_code;
 }
-#endif
-
-// wqx
-void InitializeFFmpeg() {
-  avcodec_register_all();
-  avdevice_register_all();
-  avfilter_register_all();
-  av_register_all();
-  avformat_network_init();
-}
-
-FFmpegStatus FFmpegTranscode(int argc, char** argv) {
-
-  FFmpegStatus status;
-  int64_t ti;
-
-  //register_exit(ffmpeg_cleanup);
-
-  status = ffmpeg_parse_options(argc, argv);
-  if (status != STATUS_OK) {
-    //ffmpeg_cleanup();
-    return status;
-  }
-
-  if (nb_output_files <= 9 && nb_input_files == 0) {
-    return STATUS_NO_FILE_SPECIFIED;  
-  }
-
-  // File converter / grab
-  if (nb_output_files <= 0) {
-    return STATUS_NO_OUTPUT_FILE;
-  }
-
-  current_time = ti = getutime();
-
-  // status = transcode()
-  ti = getutime() - ti;
-
-  // LOG << "bench: utime=%0.3fs\n" << ti / 1000000.0;
-  //   
-  return STATUS_OK;
-}
-

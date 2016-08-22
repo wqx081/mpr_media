@@ -492,4 +492,80 @@ bool CopyFile(const FilePath& from_path,
 //bool CopyDirectory(const FilePath& from_path, const FilePath& to_path,
 //                   bool recursive);
 //
+
+
+  bool CreateSymbolicLink(const FilePath& target_path,
+                                                    const FilePath& symlink_path) {
+    DCHECK(!symlink_path.empty());
+    DCHECK(!target_path.empty());
+    return ::symlink(target_path.value().c_str(),
+                                          symlink_path.value().c_str()) != -1;
+  }                  
+  
+  bool ReadSymbolicLink(const FilePath& symlink_path, FilePath* target_path) {
+    DCHECK(!symlink_path.empty());
+    DCHECK(target_path);
+    char buf[PATH_MAX];
+    ssize_t count = ::readlink(symlink_path.value().c_str(), buf, arraysize(buf));
+    
+    if (count <= 0) {
+      target_path->clear();
+      return false;
+    } 
+    
+    *target_path = FilePath(FilePath::StringType(buf, count));
+    return true; 
+  } 
+  
+  bool GetPosixFilePermissions(const FilePath& path, int* mode) {
+    //ThreadRestrictions::AssertIOAllowed();
+    DCHECK(mode);
+    
+    stat_wrapper_t file_info;
+    if (CallStat(path.value().c_str(), &file_info) != 0)
+      return false;
+      
+    *mode = file_info.st_mode & FILE_PERMISSION_MASK;
+    return true;
+  } 
+  
+  bool SetPosixFilePermissions(const FilePath& path,
+                                                              int mode) {
+    //ThreadRestrictions::AssertIOAllowed();
+    DCHECK_EQ(mode & ~FILE_PERMISSION_MASK, 0);
+    
+    stat_wrapper_t stat_buf;
+    if (CallStat(path.value().c_str(), &stat_buf) != 0)
+      return false;
+      
+    mode_t updated_mode_bits = stat_buf.st_mode & ~FILE_PERMISSION_MASK;
+    updated_mode_bits |= mode & FILE_PERMISSION_MASK;
+    
+    if (HANDLE_EINTR(chmod(path.value().c_str(), updated_mode_bits)) != 0)
+      return false;
+  
+    return true;
+  }
+
+#if 0
+  bool ExecutableExistsInPath(Environment* env,
+                                                            const FilePath::StringType& executable) {
+    std::string path;
+    if (!env->GetVar("PATH", &path)) {
+      LOG(ERROR) << "No $PATH variable. Assuming no " << executable << ".";
+      return false;
+    }
+  
+    for (const StringPiece& cur_path :
+                  SplitStringPiece(path, ":", KEEP_WHITESPACE, SPLIT_WANT_NONEMPTY)) {
+      FilePath file(cur_path);
+      int permissions;
+      if (GetPosixFilePermissions(file.Append(executable), &permissions) &&
+                    (permissions & FILE_PERMISSION_EXECUTE_BY_USER))
+        return true;
+    }
+    return false;
+  }
+#endif
+
 } // namespace base

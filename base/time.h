@@ -31,6 +31,7 @@ class TimeDelta final {
     return TimeDelta(microseconds);
   }
   static TimeDelta FromNanoseconds(int64_t nanoseconds);
+  static TimeDelta Max() { return TimeDelta(std::numeric_limits<int64_t>::max()); }
 
   int InDays() const;
   int InHours() const;
