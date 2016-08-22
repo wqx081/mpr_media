@@ -60,6 +60,8 @@ CPP_SOURCES := \
 	./base/process/launch_posix.cc \
 	./base/test/multiprocess_func_list.cc \
 	\
+	./cc/ffmpeg_cmdutils.cc \
+	./cc/ffmpeg_opt.cc \
 
 CPP_OBJECTS := $(CPP_SOURCES:.cc=.o)
 

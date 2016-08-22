@@ -1,17 +1,14 @@
-#ifndef CC_CMDUTILS_H
-#define CC_CMDUTILS_H
+#ifndef CC_FFMPEG_CMDUTILS_H
+#define CC_FFMPEG_CMDUTILS_H
 
 #include <stdint.h>
+#include <stdio.h>
+#include <inttypes.h>
+
+#include "cc/ffmpeg_common.h"
 
 
-extern "C" {
-
-#include "libavcodec/avcodec.h"
-#include "libavfilter/avfilter.h"
-#include "libavformat/avformat.h"
-#include "libswscale/swscale.h"
-
-} // extern "C"
+namespace ffmpeg {
 
 /**
  * program name, defined by the program for show_version().
@@ -78,12 +75,6 @@ int opt_report(const char *opt);
 int opt_max_alloc(void *optctx, const char *opt, const char *arg);
 
 int opt_codec_debug(void *optctx, const char *opt, const char *arg);
-
-#if CONFIG_OPENCL
-int opt_opencl(void *optctx, const char *opt, const char *arg);
-
-int opt_opencl_bench(void *optctx, const char *opt, const char *arg);
-#endif
 
 /**
  * Limit the execution time.
@@ -184,7 +175,7 @@ void show_help_options(const OptionDef *options, const char *msg, int req_flags,
  * Show help for all options with given flags in class and all its
  * children.
  */
-void show_help_children(const AVClass *class, int flags);
+void show_help_children(const AVClass *av_class, int flags);
 
 /**
  * Per-fftool specific help handler. Implemented in each
@@ -422,7 +413,6 @@ int show_formats(void *optctx, const char *opt, const char *arg);
  */
 int show_devices(void *optctx, const char *opt, const char *arg);
 
-#if CONFIG_AVDEVICE
 /**
  * Print a listing containing audodetected sinks of the output device.
  * Device name with options may be passed as an argument to limit results.
@@ -434,7 +424,6 @@ int show_sinks(void *optctx, const char *opt, const char *arg);
  * Device name with options may be passed as an argument to limit results.
  */
 int show_sources(void *optctx, const char *opt, const char *arg);
-#endif
 
 /**
  * Print a listing containing all the codecs supported by the
@@ -558,12 +547,14 @@ void *grow_array(void *array, int elem_size, int *size, int new_size);
 
 #define GET_CH_LAYOUT_NAME(ch_layout)\
     char name[16];\
-    snprintf(name, sizeof(name), "0x%"PRIx64, ch_layout);
+    snprintf(name, sizeof(name), "0x%" PRIx64, ch_layout);
 
 #define GET_CH_LAYOUT_DESC(ch_layout)\
     char name[128];\
     av_get_channel_layout_string(name, sizeof(name), 0, ch_layout);
 
 double get_rotation(AVStream *st);
+
+} // namespace
 
 #endif /* CMDUTILS_H */
