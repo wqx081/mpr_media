@@ -3,6 +3,7 @@
 #include "cc/ffmpeg_c.h"
 #include "cc/ffmpeg_common.h"
 
+#include <glog/logging.h>
 
 namespace ffmpeg {
 
@@ -962,16 +963,20 @@ static int configure_input_filter(FilterGraph *fg, InputFilter *ifilter,
 
 int configure_filtergraph(FilterGraph *fg)
 {
+
     AVFilterInOut *inputs, *outputs, *cur;
     int ret, i, simple = !fg->graph_desc;
     const char *graph_desc = simple ? fg->outputs[0]->ost->avfilter :
                              fg->graph_desc;
 
     avfilter_graph_free(&fg->graph);
-    if (!(fg->graph = avfilter_graph_alloc()))
+    if (!(fg->graph = avfilter_graph_alloc())) {
+LOG(INFO) << "------1";
         return AVERROR(ENOMEM);
+    }
 
     if (simple) {
+LOG(INFO) << "------12";
         OutputStream *ost = fg->outputs[0]->ost;
         char args[512];
         AVDictionaryEntry *e = NULL;
@@ -1008,8 +1013,14 @@ int configure_filtergraph(FilterGraph *fg)
             av_opt_set(fg->graph, "threads", e->value, 0);
     }
 
-    if ((ret = avfilter_graph_parse2(fg->graph, graph_desc, &inputs, &outputs)) < 0)
+    if (fg->graph == NULL) {
+LOG(INFO) << "------23";
+    }
+    LOG(INFO) << "graph_desc: " << graph_desc;
+    if ((ret = avfilter_graph_parse2(fg->graph, graph_desc, &inputs, &outputs)) < 0) {
+LOG(INFO) << "------2";
         return ret;
+    }
 
     if (hw_device_ctx) {
         for (i = 0; (unsigned)i < fg->graph->nb_filters; i++) {
@@ -1046,6 +1057,7 @@ int configure_filtergraph(FilterGraph *fg)
         if ((ret = configure_input_filter(fg, fg->inputs[i], cur)) < 0) {
             avfilter_inout_free(&inputs);
             avfilter_inout_free(&outputs);
+LOG(INFO) << "------3";
             return ret;
         }
     avfilter_inout_free(&inputs);
@@ -1055,8 +1067,10 @@ int configure_filtergraph(FilterGraph *fg)
     avfilter_inout_free(&outputs);
 
 
-    if ((ret = avfilter_graph_config(fg->graph, NULL)) < 0)
+    if ((ret = avfilter_graph_config(fg->graph, NULL)) < 0) {
+LOG(INFO) << "------4";
         return ret;
+    }
 
     fg->reconfiguration = 1;
 

@@ -1,5 +1,6 @@
 #include "cc/ffmpeg_cmdutils.h"
 #include "cc/ffmpeg_io.h"
+#include "cc/ffmpeg_c_api.h"
 
 namespace ffmpeg {
 
@@ -28,6 +29,7 @@ base::Status FFmpegIO::ConfigureComplexFilters() {
   if (!ConfigureComplexFilters_C()) {
     return base::Status(base::Code::INTERNAL, "C:ConfigureComplexFilters_C Error");
   }
+  UninitParseContext_C(&option_parse_context_);
   return base::Status::OK();
 }
 

@@ -17,6 +17,8 @@
 #include "base/numbers.h"
 #include "base/location.h"
 #include "cc/ffmpeg_exception.h"
+#include "cc/ffmpeg_facade.h"
+#include "cc/ffmpeg_c_api.h"
 
 namespace ffmpeg {
 

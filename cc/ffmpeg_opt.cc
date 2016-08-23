@@ -2,9 +2,10 @@
 
 #include "cc/config.h"
 
-#include "ffmpeg_common.h"
-#include "ffmpeg_cmdutils.h"
-#include "ffmpeg_c.h"
+#include "cc/ffmpeg_common.h"
+#include "cc/ffmpeg_cmdutils.h"
+#include "cc/ffmpeg_c.h"
+#include "cc/ffmpeg_c_api.h"
 
 #define DEFAULT_PASS_LOGFILENAME_PREFIX "ffmpeg2pass"
 

@@ -1,5 +1,5 @@
 #include "cc/ffmpeg_facade.h"
-
+#include "cc/ffmpeg_c_api.h"
 #include "cc/config.h"
 #include "cc/ffmpeg_c.h"
 #include "cc/ffmpeg_cmdutils.h"
@@ -137,6 +137,14 @@ base::Status FFmpegFacade::Transcode() {
   DCHECK(state_ == State::READY);
   state_ = State::TRANSCODING;
 
+  base::Status status;
+  status = Transcode_C(ffmpeg_command_line_->argc(),
+		       ffmpeg_command_line_->argv(),
+		       observer_list_);
+  if (!status.ok()) {
+    return status; 
+  }
+
   state_ = State::DONE;
   return base::Status::Status::OK();
 }
@@ -145,5 +153,30 @@ FFmpegFacade::State FFmpegFacade::state() {
   std::lock_guard<std::mutex> lock(mutex_);  
   return state_;
 }
+
+bool FFmpegFacade::RegisterTranscodeObserver(FFmpegFacade::TranscodeObserver*
+		                             observer) {
+  for (auto it = observer_list_.begin();
+       it != observer_list_.end();
+       ++it) {
+    if (*it == observer) {
+      return false;
+    }
+  }
+  observer_list_.push_back(observer);
+  return true;
+}
+      
+void FFmpegFacade::UnregisterTranscodeObserver(
+		FFmpegFacade::TranscodeObserver* observer) {
+  for (auto it = observer_list_.begin();
+       it != observer_list_.end();
+       ++it) {
+    if (*it == observer) {
+      observer_list_.erase(it);
+    }  
+  }
+}
+
 
 } // namespace ffmpeg

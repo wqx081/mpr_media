@@ -28,13 +28,9 @@
 #include <memory>
 #include "base/ptr_util.h"
 #include "base/command_line.h"
-#include "cc/ffmpeg_c.h"
 #include "cc/ffmpeg_cmdutils.h"
 
 #include <glog/logging.h>
-
-#include <stdlib.h>
-#include <stdio.h>
 
 namespace ffmpeg {
 
@@ -50,27 +46,18 @@ class FFmpegCommandLineInterface {
 //
 class FFmpegCommandLine : public FFmpegCommandLineInterface {
  public:
-  virtual ~FFmpegCommandLine() override {
-    if (argc_ > 0) {
-      for (int i=0; i < argc_; ++i) {
-        if (argv_[i]) {
-          ::free(argv_[i]);
-        }
-      }
-      ::free(argv_);
-    }
-    // C API
-    UninitParseContext_C(&option_parse_context_);
-  }
+  virtual ~FFmpegCommandLine() override;
 
-  static std::unique_ptr<FFmpegCommandLine> FromArgs(const base::CommandLine::StringVector& args) {
+  static std::unique_ptr<FFmpegCommandLine> FromArgs(
+		  const base::CommandLine::StringVector& args) {
     if (args.empty()) {
       return nullptr;
     }
     return base::MakeUnique<FFmpegCommandLine>(args);
   }
 
-  FFmpegCommandLine(const base::CommandLine::StringVector& args): argv_(nullptr), argc_(0) {
+  FFmpegCommandLine(const base::CommandLine::StringVector& args)
+      : argv_(nullptr), argc_(0) {
     DoInit(args);     
   }
 
@@ -78,28 +65,20 @@ class FFmpegCommandLine : public FFmpegCommandLineInterface {
   virtual base::Status ApplyGlobalOptions() override;
   virtual OptionParseContext GetOptionParseContext() override;
 
+  char** argv() {
+    return argv_;
+  }
+
+  int argc() {
+    return argc_;
+  }
+
  private:
   char** argv_;
   int argc_;
   OptionParseContext option_parse_context_;
 
-  void DoInit(const base::CommandLine::StringVector& args) {
-    argv_ = (char **) malloc((args.size() + 1) * sizeof(char *));
-    DCHECK(argv_);
-    for (size_t i=0; i < args.size(); ++i) {
-      argv_[i] = (char*)malloc(args[i].size() + 1);
-      DCHECK(argv_[i]);
-      ::strcpy(argv_[i], args[i].c_str());
-    }
-    argv_[args.size()] = nullptr;
-    argc_ = args.size(); 
-    ::memset(&option_parse_context_, 0, sizeof(option_parse_context_));
-    // C API
-    // Init C argv and context
-    PrepareAppArguments_C(&argc_, &argv_);
-    InitParseContext_C(&option_parse_context_); 
-  }
-
+  void DoInit(const base::CommandLine::StringVector& args);
 };
 
 } // namespace ffmpeg

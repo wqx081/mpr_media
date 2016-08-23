@@ -57,6 +57,7 @@
 namespace ffmpeg {
 
 class FFmpegFacade {
+
  public:
 
   enum State {
@@ -88,6 +89,10 @@ class FFmpegFacade {
   // transcode
   bool RegisterTranscodeObserver(TranscodeObserver* observer);
   void UnregisterTranscodeObserver(TranscodeObserver* observer);
+  std::vector<TranscodeObserver*> observer_list() {
+    return observer_list_;
+  }
+
   base::Status Transcode();
 
   State state();
@@ -95,6 +100,9 @@ class FFmpegFacade {
   void Reset();
   void Desotry();
  private:
+  friend base::Status Transcode_C(int argc, 
+		                  char** argv,
+				  std::vector<TranscodeObserver*>&);
 
   std::mutex mutex_;
   State state_;

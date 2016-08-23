@@ -575,23 +575,5 @@ void *grow_array(void *array, int elem_size, int *size, int new_size);
 
 double get_rotation(AVStream *st);
 
-
-// wqx
-// implemented in ffmpeg_cmdutils.cc
-extern const OptionGroupDef groups[];
-void PrepareAppArguments_C(int* argc, char*** argv_ptr);
-void InitParseContext_C(OptionParseContext* option_parse_context);
-void UninitParseContext_C(OptionParseContext* option_parse_context);
-bool SplitCommandLine_C(OptionParseContext* option_parse_context, int argc, char** argv);
-bool ParseOptGroup_C(OptionGroup* group);
-
-// wqx Steal From ffmpeg_opt.c : ffmpeg_parse_options()
-// implemented in ffmpeg_opt.cc
-bool OpenInputFiles_C(OptionParseContext* option_parse_context);
-bool OpenOutputFiles_C(OptionParseContext* option_parse_context);
-bool InitComplexFilters_C();
-bool ConfigureComplexFilters_C();
-void FFmpegCleanup_C(int ret=0);
-
-} // namespace
+} // namespace ffmpeg
 #endif /* CMDUTILS_H */

@@ -24,6 +24,12 @@
 #include "cc/ffmpeg_c.h"
 #include "cc/ffmpeg_cmdutils.h"
 
+#include "cc/ffmpeg_facade.h"
+#include "cc/ffmpeg_c_api.h"
+#include "base/status.h"
+
+#include <string>
+
 
 namespace ffmpeg {
 
@@ -1370,7 +1376,11 @@ static void print_final_stats(int64_t total_size)
     }
 }
 
-static void print_report(int is_last_report, int64_t timer_start, int64_t cur_time)
+static void print_report(int is_last_report, 
+		         int64_t timer_start, 
+			 int64_t cur_time,
+			 std::vector<FFmpegFacade::TranscodeObserver*>&
+			 observer_list)
 {
     char buf[1024];
     AVBPrint buf_script;
@@ -1538,10 +1548,18 @@ static void print_report(int is_last_report, int64_t timer_start, int64_t cur_ti
         if (print_stats==1 && AV_LOG_INFO > av_log_get_level()) {
             fprintf(stderr, "%s    %c", buf, end);
         } else {
-            av_log(NULL, AV_LOG_INFO, "%s    %c", buf, end);
+            // wqx
+            //av_log(NULL, AV_LOG_INFO, "%s    %c", buf, end);
+	    for (size_t i = 0; i < observer_list.size(); ++i) {
+              if (observer_list[i]) {
+	        std::string info(buf);
+		observer_list[i]->OnTranscodeStep(info);
+              }
+	    }
         }
 
-        fflush(stderr);
+	//wqx
+        //fflush(stderr);
     }
 
     if (progress_avio) {
@@ -1658,7 +1676,9 @@ static int check_output_constraints(InputStream *ist, OutputStream *ost)
     return 1;
 }
 
-static void do_streamcopy(InputStream *ist, OutputStream *ost, const AVPacket *pkt)
+static void do_streamcopy(InputStream *ist, 
+		          OutputStream *ost, 
+			  const AVPacket *pkt)
 {
     OutputFile *of = output_files[ost->file_index];
     InputFile   *f = input_files [ist->file_index];
@@ -2930,6 +2950,10 @@ static int transcode_init(void)
                      enc_ctx->codec_type == AVMEDIA_TYPE_AUDIO)) {
                 FilterGraph *fg;
                 fg = init_simple_filtergraph(ist, ost);
+		if (fg == NULL) {
+		  fprintf(stderr, "--------xx\n");
+		}
+		fprintf(stderr, "--------yy\n");
                 if (configure_filtergraph(fg)) {
                     av_log(NULL, AV_LOG_FATAL, "Error opening filters!\n");
                     exit_program(1);
@@ -3941,7 +3965,8 @@ static int transcode_step(void)
     return reap_filters(0);
 }
 
-static int transcode(void)
+static int transcode(std::vector<FFmpegFacade::TranscodeObserver*>&
+		     observer_list) 
 {
     int ret, i;
     AVFormatContext *os;
@@ -3987,7 +4012,7 @@ static int transcode(void)
         }
 
         /* dump report by using the output first video and audio streams */
-        print_report(0, timer_start, cur_time);
+        print_report(0, timer_start, cur_time, observer_list);
     }
     free_input_threads();
     /* at the end of stream, we must flush the decoder buffers */
@@ -4012,7 +4037,8 @@ static int transcode(void)
     }
 
     /* dump report by using the first video and audio streams */
-    print_report(1, timer_start, av_gettime_relative());
+    // wqx
+    // print_report(1, timer_start, av_gettime_relative());
 
     /* close each encoder */
     for (i = 0; i < nb_output_streams; i++) {
@@ -4241,15 +4267,51 @@ static void log_callback_null(void *ptr, int level, const char *fmt, va_list vl)
 //    avformat_network_deinit();
   
     if (received_sigterm) {
-            av_log(NULL, AV_LOG_INFO, "Exiting normally, received signal %d.\n",
+      av_log(NULL, AV_LOG_INFO, "Exiting normally, received signal %d.\n",
                                                        (int) received_sigterm);
     } else if (ret && transcode_init_done) {
       av_log(NULL, AV_LOG_INFO, "Conversion failed!\n");
     }
     term_exit();
     ffmpeg_exited = 1;
+}
+
+
+// wqx
+
+base::Status Transcode_C(int argc,
+		         char** argv,
+     std::vector<FFmpegFacade::TranscodeObserver*>& observer_list) {
+  int64_t ti;
+
+  setvbuf(stderr, NULL, _IONBF, 0);
+
+  av_log_set_flags(AV_LOG_SKIP_REPEATED);
+  parse_loglevel(argc, argv, options);
+
+//  term_init();
+
+  if (nb_output_files <= 0 && nb_input_files == 0) {
+    return base::Status(base::Code::INVALID_ARGUMENT,
+      std::string("Invalid argument, see Usage:"));
   }
 
+  if (nb_output_files <= 0) {
+    return base::Status(base::Code::INVALID_ARGUMENT,
+      std::string("At least one output file must be specified"));
+  }
+
+  current_time = ti = getutime();
+  // Transcode
+  if (transcode(observer_list) < 0) {
+    return base::Status(base::Code::INTERNAL,
+		    std::string("transcode: error"));
+  } 
+    
+  // End
+  ti = getutime() - ti;
+  return base::Status::OK();
+}
 
 
 } // namespace ffmpeg
