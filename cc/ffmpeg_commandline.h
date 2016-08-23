@@ -86,7 +86,7 @@ class FFmpegCommandLine : public FFmpegCommandLineInterface {
   void DoInit(const base::CommandLine::StringVector& args) {
     argv_ = (char **) malloc((args.size() + 1) * sizeof(char *));
     DCHECK(argv_);
-    for (int i=0; i < args.size(); ++i) {
+    for (size_t i=0; i < args.size(); ++i) {
       argv_[i] = (char*)malloc(args[i].size() + 1);
       DCHECK(argv_[i]);
       ::strcpy(argv_[i], args[i].c_str());

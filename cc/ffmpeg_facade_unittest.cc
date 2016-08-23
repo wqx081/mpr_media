@@ -25,9 +25,7 @@ TEST(FFmpegFacade, Create) {
   argv.push_back("libfaac");
   argv.push_back("/tmp/out.flv");
 
-  base::CommandLine command_line(argv);
-
-  base::Status status = ffmpeg_facade->Initialize(command_line);
+  base::Status status = ffmpeg_facade->Initialize(argv);
   EXPECT_TRUE(status.ok());
 
   status = ffmpeg_facade->ReadyDataIO();

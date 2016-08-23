@@ -44,16 +44,18 @@ void FFmpegFacade::Desotry() {
 }
 
 // APIs
-base::Status FFmpegFacade::Initialize(const base::CommandLine& command_line) {
+base::Status FFmpegFacade::Initialize(
+		const base::CommandLine::StringVector& args) {
   std::lock_guard<std::mutex> lock(mutex_);  
   DCHECK(state_ == State::UNINITILIAZED);
   
-  args_ = command_line.GetArgs();
+  //args_ = command_line.GetArgs();
+  args_ = args; ;
 
   // Transcode args to internal respresentation
   // Apply the global options
   base::Status status;
-  ffmpeg_command_line_ = std::move(FFmpegCommandLine::FromArgs(args_));
+  ffmpeg_command_line_.reset(std::move(FFmpegCommandLine::FromArgs(args_)).release());
   status = ffmpeg_command_line_->Split();
   if (!status.ok()) {
     return status;

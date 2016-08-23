@@ -80,7 +80,7 @@ class FFmpegFacade {
 
   static FFmpegFacade* GetInstance();
   // parse arguments to internal
-  base::Status Initialize(const base::CommandLine& command_line);
+  base::Status Initialize(const base::CommandLine::StringVector& args);
   // open input/output files (codec/encode...)
   base::Status ReadyDataIO();
   MetaData meta_data();
