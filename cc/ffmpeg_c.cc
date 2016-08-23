@@ -3058,26 +3058,6 @@ static int transcode_init(void)
         }
 
         if (ost->disposition) {
-#if 0
-            static const AVOption opts[] = {
-                { "disposition"         , NULL, 0, AV_OPT_TYPE_FLAGS, { .i64 = 0 }, INT64_MIN, INT64_MAX, .unit = "flags" },
-                { "default"             , NULL, 0, AV_OPT_TYPE_CONST, { .i64 = AV_DISPOSITION_DEFAULT           },    .unit = "flags" },
-                { "dub"                 , NULL, 0, AV_OPT_TYPE_CONST, { .i64 = AV_DISPOSITION_DUB               },    .unit = "flags" },
-                { "original"            , NULL, 0, AV_OPT_TYPE_CONST, { .i64 = AV_DISPOSITION_ORIGINAL          },    .unit = "flags" },
-                { "comment"             , NULL, 0, AV_OPT_TYPE_CONST, { .i64 = AV_DISPOSITION_COMMENT           },    .unit = "flags" },
-                { "lyrics"              , NULL, 0, AV_OPT_TYPE_CONST, { .i64 = AV_DISPOSITION_LYRICS            },    .unit = "flags" },
-                { "karaoke"             , NULL, 0, AV_OPT_TYPE_CONST, { .i64 = AV_DISPOSITION_KARAOKE           },    .unit = "flags" },
-                { "forced"              , NULL, 0, AV_OPT_TYPE_CONST, { .i64 = AV_DISPOSITION_FORCED            },    .unit = "flags" },
-                { "hearing_impaired"    , NULL, 0, AV_OPT_TYPE_CONST, { .i64 = AV_DISPOSITION_HEARING_IMPAIRED  },    .unit = "flags" },
-                { "visual_impaired"     , NULL, 0, AV_OPT_TYPE_CONST, { .i64 = AV_DISPOSITION_VISUAL_IMPAIRED   },    .unit = "flags" },
-                { "clean_effects"       , NULL, 0, AV_OPT_TYPE_CONST, { .i64 = AV_DISPOSITION_CLEAN_EFFECTS     },    .unit = "flags" },
-                { "captions"            , NULL, 0, AV_OPT_TYPE_CONST, { .i64 = AV_DISPOSITION_CAPTIONS          },    .unit = "flags" },
-                { "descriptions"        , NULL, 0, AV_OPT_TYPE_CONST, { .i64 = AV_DISPOSITION_DESCRIPTIONS      },    .unit = "flags" },
-                { "metadata"            , NULL, 0, AV_OPT_TYPE_CONST, { .i64 = AV_DISPOSITION_METADATA          },    .unit = "flags" },
-                { NULL , NULL, 0},
-            };
-#endif
-         
 
             static AVOption opts1[15];
 #define INIT_OPTS(index, n, t, i, min_v, max_v) \
@@ -4130,6 +4110,145 @@ static void log_callback_null(void *ptr, int level, const char *fmt, va_list vl)
 {
   (void)ptr; (void) level; (void)fmt; (void) vl;
 }
+
+//wqx
+  void FFmpegCleanup_C(int ret) {
+    int i, j;
+    for (i=0; i < nb_filtergraphs; ++i) {
+      FilterGraph *fg = filtergraphs[i];
+      avfilter_graph_free(&fg->graph);
+      for (j = 0; j < fg->nb_inputs; j++) {
+        av_freep(&fg->inputs[j]->name);
+        av_freep(&fg->inputs[j]);
+      }
+      av_freep(&fg->inputs);
+      for (j = 0; j < fg->nb_outputs; j++) {
+        av_freep(&fg->outputs[j]->name);
+        av_freep(&fg->outputs[j]);
+      }
+      av_freep(&fg->outputs);
+      av_freep(&fg->graph_desc);
+  
+      av_freep(&filtergraphs[i]);
+    }
+    if (filtergraphs) {
+      av_freep(&filtergraphs);
+      filtergraphs = nullptr;
+    }
+    nb_filtergraphs = 0;
+  
+    if (subtitle_out) {
+      av_freep(&subtitle_out);
+      subtitle_out = nullptr;
+    }
+  
+    for (i = 0; i < nb_output_files; i++) {
+      OutputFile *of = output_files[i];
+      AVFormatContext *s;
+      if (!of)
+        continue;
+      s = of->ctx;
+      if (s && s->oformat && !(s->oformat->flags & AVFMT_NOFILE))
+        avio_closep(&s->pb);
+      avformat_free_context(s);
+      av_dict_free(&of->opts);
+  
+      av_freep(&output_files[i]);
+    }
+    nb_output_files = 0;
+  
+    for (i = 0; i < nb_output_streams; i++) {
+      OutputStream *ost = output_streams[i];
+      AVBitStreamFilterContext *bsfc;
+  
+      if (!ost)
+        continue;
+  
+      bsfc = ost->bitstream_filters;
+      while (bsfc) {
+        AVBitStreamFilterContext *next = bsfc->next;
+        av_bitstream_filter_close(bsfc);
+        bsfc = next;
+      }
+      ost->bitstream_filters = NULL;
+      av_frame_free(&ost->filtered_frame);
+      av_frame_free(&ost->last_frame);
+  
+      av_parser_close(ost->parser);
+  
+      av_freep(&ost->forced_keyframes);
+      av_expr_free(ost->forced_keyframes_pexpr);
+      av_freep(&ost->avfilter);
+      av_freep(&ost->logfile_prefix);
+  
+      av_freep(&ost->audio_channels_map);
+      ost->audio_channels_mapped = 0;
+  
+      av_dict_free(&ost->sws_dict);
+  
+      avcodec_free_context(&ost->enc_ctx);
+  
+      av_freep(&output_streams[i]);
+    }
+    nb_output_streams = 0;
+  
+    free_input_threads();
+  
+    for (i = 0; i < nb_input_files; i++) {
+      avformat_close_input(&input_files[i]->ctx);
+      av_freep(&input_files[i]);
+    }
+    nb_input_files = 0;
+  
+    for (i = 0; i < nb_input_streams; i++) {
+      InputStream *ist = input_streams[i];
+  
+      av_frame_free(&ist->decoded_frame);
+      av_frame_free(&ist->filter_frame);
+      av_dict_free(&ist->decoder_opts);
+      avsubtitle_free(&ist->prev_sub.subtitle);
+      av_frame_free(&ist->sub2video.frame);
+      av_freep(&ist->filters);
+      av_freep(&ist->hwaccel_device);
+  
+      avcodec_free_context(&ist->dec_ctx);
+  
+      av_freep(&input_streams[i]);
+    }
+    nb_input_streams = 0;
+  
+  
+    if (vstats_file) {
+      if (fclose(vstats_file))
+          av_log(NULL, AV_LOG_ERROR,
+                                  "Error closing vstats file, loss of information possible: %s\n",
+                                  AvErr2Str(AVERROR(errno)));
+    }
+    av_freep(&vstats_filename);
+  
+    av_freep(&input_streams);
+    av_freep(&input_files);
+    av_freep(&output_streams);
+    av_freep(&output_files);
+  
+    input_streams = nullptr;
+    input_files = nullptr;
+    output_streams = nullptr;
+    output_files = nullptr;
+  
+    uninit_opts();
+  
+//    avformat_network_deinit();
+  
+    if (received_sigterm) {
+            av_log(NULL, AV_LOG_INFO, "Exiting normally, received signal %d.\n",
+                                                       (int) received_sigterm);
+    } else if (ret && transcode_init_done) {
+      av_log(NULL, AV_LOG_INFO, "Conversion failed!\n");
+    }
+    term_exit();
+    ffmpeg_exited = 1;
+  }
 
 
 

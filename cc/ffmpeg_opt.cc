@@ -3111,7 +3111,7 @@ enum OptGroup {
     GROUP_INFILE,
 };
 
-static const OptionGroupDef groups[] = {
+const OptionGroupDef groups[] = {
     [GROUP_OUTFILE] = { "output file",  NULL, OPT_OUTPUT },
     [GROUP_INFILE]  = { "input file",   "i",  OPT_INPUT },
 };
@@ -3148,6 +3148,58 @@ static int open_files(OptionGroupList *l, const char *inout,
 
     return 0;
 }
+
+// wqx
+bool SplitCommandLine_C(OptionParseContext* option_parse_context,
+                      int argc,
+                      char** argv) {
+  int ret;
+  ret = split_commandline_c(option_parse_context, argc, argv, options, groups,
+                            FF_ARRAY_ELEMS(groups));
+  if (ret < 0)
+    return false;
+  return true;
+}
+
+bool OpenInputFiles_C(OptionParseContext* option_parse_context) {
+  int ret;
+  ret = open_files(&option_parse_context->groups[GROUP_INFILE],
+                   "input",
+                   open_input_file);
+  if (ret < 0)
+    return false;
+  return true;
+}
+
+bool InitComplexFilters_C() {
+  int ret;
+  ret = init_complex_filters();
+  if (ret < 0) {
+    return false;
+  }
+  return true;
+}
+
+bool OpenOutputFiles_C(OptionParseContext* option_parse_context) {
+  int ret;
+  ret = open_files(&option_parse_context->groups[GROUP_OUTFILE],
+                   "output",
+                   open_output_file);
+  if (ret < 0)
+    return false;
+  return true;
+}
+
+bool ConfigureComplexFilters_C() {
+  int ret;
+  ret = configure_complex_filters();
+  if (ret < 0) {
+    return false;
+  }
+  return true;
+}
+
+/////////////////////////
 
 int ffmpeg_parse_options(int argc, char **argv)
 {

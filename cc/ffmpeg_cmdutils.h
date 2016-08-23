@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <inttypes.h>
 
+#include "base/status.h"
 #include "cc/ffmpeg_common.h"
 
 
@@ -96,6 +97,14 @@ int opt_timelimit(void *optctx, const char *opt, const char *arg);
  */
 double parse_number_or_die(const char *context, const char *numstr, int type,
                            double min, double max);
+//TODO
+base::Status ParseNumber(const char* context,
+                         const char* num_str,
+                         int type,
+                         double min,
+                         double max,
+                         double& ret);
+
 
 /**
  * Parse a string specifying a time and return its corresponding
@@ -113,6 +122,12 @@ double parse_number_or_die(const char *context, const char *numstr, int type,
  */
 int64_t parse_time_or_die(const char *context, const char *timestr,
                           int is_duration);
+//TODO
+base::Status ParseTime(const char* context,
+                       const char* timestr,
+                       int is_duration,
+                       int64_t& ret);
+
 
 typedef struct SpecifierOpt {
     char *specifier;    /**< stream/chapter/program/... specifier */
@@ -298,6 +313,11 @@ int parse_optgroup(void *optctx, OptionGroup *g);
  * same as the order of group definitions.
  */
 int split_commandline(OptionParseContext *octx, int argc, char *argv[],
+                      const OptionDef *options,
+                      const OptionGroupDef *groups, int nb_groups);
+
+// wqx
+int split_commandline_c(OptionParseContext *octx, int argc, char *argv[],
                       const OptionDef *options,
                       const OptionGroupDef *groups, int nb_groups);
 
@@ -555,6 +575,23 @@ void *grow_array(void *array, int elem_size, int *size, int new_size);
 
 double get_rotation(AVStream *st);
 
-} // namespace
 
+// wqx
+// implemented in ffmpeg_cmdutils.cc
+extern const OptionGroupDef groups[];
+void PrepareAppArguments_C(int* argc, char*** argv_ptr);
+void InitParseContext_C(OptionParseContext* option_parse_context);
+void UninitParseContext_C(OptionParseContext* option_parse_context);
+bool SplitCommandLine_C(OptionParseContext* option_parse_context, int argc, char** argv);
+bool ParseOptGroup_C(OptionGroup* group);
+
+// wqx Steal From ffmpeg_opt.c : ffmpeg_parse_options()
+// implemented in ffmpeg_opt.cc
+bool OpenInputFiles_C(OptionParseContext* option_parse_context);
+bool OpenOutputFiles_C(OptionParseContext* option_parse_context);
+bool InitComplexFilters_C();
+bool ConfigureComplexFilters_C();
+void FFmpegCleanup_C(int ret=0);
+
+} // namespace
 #endif /* CMDUTILS_H */

@@ -7,10 +7,8 @@
 
 #include <pthread.h>
 
+#include "base/status.h"
 #include "cc/ffmpeg_common.h"
-
-//#include "cmdutils.h"
-
 #include "cc/ffmpeg_cmdutils.h"
 
 #define VSYNC_AUTO       -1

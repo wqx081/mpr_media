@@ -64,6 +64,10 @@ CPP_SOURCES := \
 	./cc/ffmpeg_opt.cc \
 	./cc/ffmpeg_filter.cc \
 	./cc/ffmpeg_c.cc \
+	\
+	./cc/ffmpeg_facade.cc \
+	./cc/ffmpeg_commandline.cc \
+	./cc/ffmpeg_io.cc \
 
 CPP_OBJECTS := $(CPP_SOURCES:.cc=.o)
 
@@ -85,6 +89,7 @@ CC=gcc
 TESTS :=  \
 	./base/process/process_unittest \
 	./base/command_line_unittest \
+	./cc/ffmpeg_facade_unittest \
 
 #all: $(C_OBJECTS) $(APP) $(CPP_OBJECTS) $(TESTS)
 all: $(CPP_OBJECTS) $(TESTS)
@@ -114,6 +119,13 @@ $(APP): ./c/ffmpeg.o
 	@echo "  [LINK] $@"
 	@$(CXX) -o $@ $< $(CPP_OBJECTS) $(BASE_LIB_FILES) $(TEST_LIB_FILES) $(FFMPEG_LIB_FILES)
 ./base/process/process_unittest.o: ./base/process/process_unittest.cc
+	@echo "  [CXX]  $@"
+	@$(CXX) $(CXXFLAGS) $@ $<
+
+./cc/ffmpeg_facade_unittest: ./cc/ffmpeg_facade_unittest.o
+	@echo "  [LINK] $@"
+	@$(CXX) -o $@ $< $(CPP_OBJECTS) $(BASE_LIB_FILES) $(TEST_LIB_FILES) $(FFMPEG_LIB_FILES)
+./cc/ffmpeg_facade_unittest.o: ./cc/ffmpeg_facade_unittest.cc
 	@echo "  [CXX]  $@"
 	@$(CXX) $(CXXFLAGS) $@ $<
 

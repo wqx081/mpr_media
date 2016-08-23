@@ -4,9 +4,6 @@
 #include <errno.h>
 #include <math.h>
 #include <stdarg.h>
-/* Include only the enabled headers since some compilers (namely, Sun
-   Studio) will not omit unused inline functions and create undefined
-   references to libraries that are not being built. */
 
 #include "config.h"
 
@@ -16,6 +13,8 @@
 #include <sys/time.h>
 #include <sys/resource.h>
 
+
+#include "base/numbers.h"
 
 namespace ffmpeg {
 
@@ -81,6 +80,61 @@ void exit_program(int ret)
     exit(ret);
 }
 
+////////////
+//
+template<typename R>
+base::Status ParseNumber(R& ret, const char*context, const char* str);
+
+template<>
+base::Status ParseNumber(int& ret, const char* context, const char* str) {
+    int32_t r;
+    if (base::safe_strto32(str, &r)) {
+        ret = r;
+        return base::Status::OK();
+    }
+    return base::Status(base::Code::INVALID_ARGUMENT,
+                        "Expected number for " + std::string(context) +
+                        ", but found: " + std::string(str));
+}
+
+template<>
+base::Status ParseNumber(int64_t& ret, const char* context, const char* str) {
+    int64_t r;
+    if (base::safe_strto64(str, &r)) {
+        ret = r;
+        return base::Status::OK();
+    }
+    return base::Status(base::Code::INVALID_ARGUMENT,
+                        "Expected number for " + std::string(context) +
+                        ", but found: " + std::string(str));
+}
+
+template<>
+base::Status ParseNumber(float& ret, const char* context, const char* str) {
+    float r;
+    if (base::safe_strtof(str, &r)) {
+        ret = r;
+        return base::Status::OK();
+    }
+    return base::Status(base::Code::INVALID_ARGUMENT,
+                        "Expected number for " + std::string(context) +
+                        ", but found: " + std::string(str));
+}
+
+template<>
+base::Status ParseNumber(double& ret, const char* context, const char* str) {
+    double r;
+    if (base::safe_strtod(str, &r)) {
+        ret = r;
+        return base::Status::OK();
+    }
+    return base::Status(base::Code::INVALID_ARGUMENT,
+                        "Expected number for " + std::string(context) +
+                        ", but found: " + std::string(str));
+}
+
+///////////
+
 double parse_number_or_die(const char *context, const char *numstr, int type,
                            double min, double max)
 {
@@ -101,6 +155,7 @@ double parse_number_or_die(const char *context, const char *numstr, int type,
     exit_program(1);
     return 0;
 }
+
 
 int64_t parse_time_or_die(const char *context, const char *timestr,
                           int is_duration)
@@ -219,7 +274,7 @@ static int write_option(void *optctx,
         *(double *)dst = parse_number_or_die(opt, arg, OPT_DOUBLE, -INFINITY, INFINITY);
     } else if (po->u.func_arg) {
         int ret = po->u.func_arg(optctx, opt, arg);
-	char errbuf[512] = {0};
+        char errbuf[512] = {0};
         if (ret < 0) {
             av_log(NULL, AV_LOG_ERROR, "Failed to set value '%s' for option '%s': %s\n", arg, opt, av_make_error_string(errbuf, 512, ret));
             return ret;
@@ -551,7 +606,7 @@ static void finish_group(OptionParseContext *octx, int group_idx,
     OptionGroup *g;
 
     l->groups = (OptionGroup *) grow_array(l->groups, sizeof(*(l->groups)), &l->nb_groups, l->nb_groups+ 1);
-    
+
     g = &l->groups[l->nb_groups - 1];
 
     *g             = octx->cur_group;
@@ -746,8 +801,8 @@ do {                                                                           \
 
 int opt_cpuflags(void *optctx, const char *opt, const char *arg)
 {
-  (void) optctx;
-  (void) opt;
+    (void) optctx;
+    (void) opt;
     int ret;
     unsigned flags = av_get_cpu_flags();
 
@@ -760,8 +815,8 @@ int opt_cpuflags(void *optctx, const char *opt, const char *arg)
 
 int opt_loglevel(void *optctx, const char *opt, const char *arg)
 {
-  (void) optctx;
-  (void) opt;
+    (void) optctx;
+    (void) opt;
     const struct {
         const char *name;
         int level;
@@ -915,14 +970,14 @@ static int init_report(const char *env)
 
 int opt_report(const char *opt)
 {
-  (void) opt;
+    (void) opt;
     return init_report(NULL);
 }
 
 int opt_max_alloc(void *optctx, const char *opt, const char *arg)
 {
-  (void) optctx;
-  (void) opt;
+    (void) optctx;
+    (void) opt;
 
     char *tail;
     size_t max;
@@ -938,10 +993,10 @@ int opt_max_alloc(void *optctx, const char *opt, const char *arg)
 
 int opt_timelimit(void *optctx, const char *opt, const char *arg)
 {
-  (void) optctx;
+    (void) optctx;
 #if HAVE_SETRLIMIT
     int lim = parse_number_or_die(opt, arg, OPT_INT64, 0, INT_MAX);
-    struct rlimit rl = { lim, lim + 1 };
+    struct rlimit rl = { (rlim_t)lim, (rlim_t)(lim + 1) };
     if (setrlimit(RLIMIT_CPU, &rl))
         perror("setrlimit");
 #else
@@ -1359,7 +1414,7 @@ static int compare_codec_desc(const void *a, const void *b)
     const AVCodecDescriptor * const *db = (const AVCodecDescriptor *const *)b;
 
     return (*da)->type != (*db)->type ? FFDIFFSIGN((*da)->type, (*db)->type) :
-    strcmp((*da)->name, (*db)->name);
+           strcmp((*da)->name, (*db)->name);
 }
 
 static unsigned get_codecs_sorted(const AVCodecDescriptor ***rcodecs)
@@ -1668,7 +1723,7 @@ static void show_help_codec(const char *name, int encoder)
     }
 
     codec = encoder ? avcodec_find_encoder_by_name(name) :
-    avcodec_find_decoder_by_name(name);
+            avcodec_find_decoder_by_name(name);
 
     if (codec)
         print_codec(codec);
@@ -1892,13 +1947,13 @@ AVDictionary *filter_codec_opts(AVDictionary *opts, enum AVCodecID codec_id,
     AVDictionary    *ret = NULL;
     AVDictionaryEntry *t = NULL;
     int            flags = s->oformat ? AV_OPT_FLAG_ENCODING_PARAM
-    : AV_OPT_FLAG_DECODING_PARAM;
+                           : AV_OPT_FLAG_DECODING_PARAM;
     char          prefix = 0;
     const AVClass    *cc = avcodec_get_class();
 
     if (!codec)
         codec            = s->oformat ? avcodec_find_encoder(codec_id)
-        : avcodec_find_decoder(codec_id);
+                           : avcodec_find_decoder(codec_id);
 
     switch (st->codec->codec_type) {
     case AVMEDIA_TYPE_VIDEO:
@@ -1990,7 +2045,7 @@ double get_rotation(AVStream *st)
 {
     AVDictionaryEntry *rotate_tag = av_dict_get(st->metadata, "rotate", NULL, 0);
     uint8_t* displaymatrix = av_stream_get_side_data(st,
-            AV_PKT_DATA_DISPLAYMATRIX, NULL);
+                             AV_PKT_DATA_DISPLAYMATRIX, NULL);
     double theta = 0;
 
     if (rotate_tag && *rotate_tag->value && strcmp(rotate_tag->value, "0")) {
@@ -2171,5 +2226,134 @@ fail:
 }
 
 #endif
+
+// wqx
+// C_API
+void PrepareAppArguments_C(int* argc, char*** argv_ptr) {
+    prepare_app_arguments(argc, argv_ptr);
+}
+
+void InitParseContext_C(OptionParseContext* option_parse_context) {
+    //TODO
+    init_parse_context(option_parse_context, groups, 2); //FF_ARRAY_ELEMS(groups));
+}
+
+void UninitParseContext_C(OptionParseContext* option_parse_context) {
+    uninit_parse_context(option_parse_context);
+}
+
+bool ParseOptGroup_C(OptionGroup* group) {
+    int ret;
+    ret = parse_optgroup(nullptr, group);
+    if (ret < 0)
+        return false;
+    return true;
+}
+
+int split_commandline_c(OptionParseContext *octx, int argc, char *argv[],
+                        const OptionDef *options,
+                        const OptionGroupDef *groups, int nb_groups)
+{
+    int optindex = 1;
+    int dashdash = -2;
+
+//      prepare_app_arguments(&argc, &argv);
+//      init_parse_context(octx, groups, nb_groups);
+    av_log(NULL, AV_LOG_DEBUG, "Splitting the commandline.\n");
+
+    while (optindex < argc) {
+        const char *opt = argv[optindex++], *arg;
+        const OptionDef *po;
+        int ret;
+
+        av_log(NULL, AV_LOG_DEBUG, "Reading option '%s' ...", opt);
+
+        if (opt[0] == '-' && opt[1] == '-' && !opt[2]) {
+            dashdash = optindex;
+            continue;
+        }
+        /* unnamed group separators, e.g. output filename */
+        if (opt[0] != '-' || !opt[1] || dashdash+1 == optindex) {
+            finish_group(octx, 0, opt);
+            av_log(NULL, AV_LOG_DEBUG, " matched as %s.\n", groups[0].name);
+            continue;
+        }
+        opt++;
+
+#define GET_ARG(arg)                                                           \
+  do {                                                                           \
+      arg = argv[optindex++];                                                    \
+      if (!arg) {                                                                \
+        av_log(NULL, AV_LOG_ERROR, "Missing argument for option '%s'.\n", opt);\
+        return AVERROR(EINVAL);                                                \
+      }                                                                          \
+  } while (0)
+
+        /* named group separators, e.g. -i */
+        if ((ret = match_group_separator(groups, nb_groups, opt)) >= 0) {
+            GET_ARG(arg);
+            finish_group(octx, ret, arg);
+            av_log(NULL, AV_LOG_DEBUG, " matched as %s with argument '%s'.\n",
+                   groups[ret].name, arg);
+            continue;
+        }
+
+        /* normal options */
+        po = find_option(options, opt);
+        if (po->name) {
+            if (po->flags & OPT_EXIT) {
+                /* optional argument, e.g. -h */
+                arg = argv[optindex++];
+            } else if (po->flags & HAS_ARG) {
+                GET_ARG(arg);
+            } else {
+                arg = "1";
+            }
+
+            add_opt(octx, po, opt, arg);
+            av_log(NULL, AV_LOG_DEBUG, " matched as option '%s' (%s) with "
+                   "argument '%s'.\n", po->name, po->help, arg);
+            continue;
+        }
+
+        /* AVOptions */
+        if (argv[optindex]) {
+            ret = opt_default(NULL, opt, argv[optindex]);
+            if (ret >= 0) {
+                av_log(NULL, AV_LOG_DEBUG, " matched as AVOption '%s' with "
+                       "argument '%s'.\n", opt, argv[optindex]);
+                optindex++;
+                continue;
+            } else if (ret != AVERROR_OPTION_NOT_FOUND) {
+                av_log(NULL, AV_LOG_ERROR, "Error parsing option '%s' "
+                       "with argument '%s'.\n", opt, argv[optindex]);
+                return ret;
+            }
+        }
+
+
+        /* boolean -nofoo options */
+        if (opt[0] == 'n' && opt[1] == 'o' &&
+                (po = find_option(options, opt + 2)) &&
+                po->name && po->flags & OPT_BOOL) {
+            add_opt(octx, po, opt, "0");
+            av_log(NULL, AV_LOG_DEBUG, " matched as option '%s' (%s) with "
+                   "argument 0.\n", po->name, po->help);
+            continue;
+        }
+
+        av_log(NULL, AV_LOG_ERROR, "Unrecognized option '%s'.\n", opt);
+        return AVERROR_OPTION_NOT_FOUND;
+    }
+
+    if (octx->cur_group.nb_opts || codec_opts || format_opts || resample_opts)
+        av_log(NULL, AV_LOG_WARNING, "Trailing options were found on the "
+               "commandline.\n");
+
+    av_log(NULL, AV_LOG_DEBUG, "Finished splitting the commandline.\n");
+
+    return 0;
+}
+
 
 } // namespace ffmpeg
