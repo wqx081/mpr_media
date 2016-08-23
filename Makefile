@@ -62,6 +62,8 @@ CPP_SOURCES := \
 	\
 	./cc/ffmpeg_cmdutils.cc \
 	./cc/ffmpeg_opt.cc \
+	./cc/ffmpeg_filter.cc \
+	./cc/ffmpeg_c.cc \
 
 CPP_OBJECTS := $(CPP_SOURCES:.cc=.o)
 
@@ -84,7 +86,8 @@ TESTS :=  \
 	./base/process/process_unittest \
 	./base/command_line_unittest \
 
-all: $(C_OBJECTS) $(APP) $(CPP_OBJECTS) $(TESTS)
+#all: $(C_OBJECTS) $(APP) $(CPP_OBJECTS) $(TESTS)
+all: $(CPP_OBJECTS) $(TESTS)
 
 
 .cc.o:
@@ -99,18 +102,17 @@ $(APP): ./c/ffmpeg.o
 	@echo "  [CC]  $@"
 	@$(CC) $(CFLAGS) $@ $<
 
+
 ./base/command_line_unittest: ./base/command_line_unittest.o
 	@echo "  [LINK] $@"
-	@$(CXX) -o $@ $< $(CPP_OBJECTS) $(BASE_LIB_FILES) \
-		$(TEST_LIB_FILES) $(FFMPEG_LIB_FILES)
+	@$(CXX) -o $@ $< $(CPP_OBJECTS) $(BASE_LIB_FILES) $(TEST_LIB_FILES) $(FFMPEG_LIB_FILES)
 ./base/command_line_unittest.o: ./base/command_line_unittest.cc
 	@echo "  [CXX]  $@"
 	@$(CXX) $(CXXFLAGS) $@ $<
 
 ./base/process/process_unittest: ./base/process/process_unittest.o
 	@echo "  [LINK] $@"
-	@$(CXX) -o $@ $< $(CPP_OBJECTS) $(BASE_LIB_FILES) \
-		$(TEST_LIB_FILES) $(FFMPEG_LIB_FILES)
+	@$(CXX) -o $@ $< $(CPP_OBJECTS) $(BASE_LIB_FILES) $(TEST_LIB_FILES) $(FFMPEG_LIB_FILES)
 ./base/process/process_unittest.o: ./base/process/process_unittest.cc
 	@echo "  [CXX]  $@"
 	@$(CXX) $(CXXFLAGS) $@ $<
@@ -119,4 +121,5 @@ clean:
 	rm -fr media/*.o
 	rm -fr base/*.o
 	rm -fr c/*.o
+	rm -fr cc/*.o
 	rm -fr $(TESTS)

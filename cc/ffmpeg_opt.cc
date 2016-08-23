@@ -1,15 +1,10 @@
 #include <stdint.h>
 
-//#include "ffmpeg.h"
-//#include "cmdutils.h"
-#include <libavutil/avutil.h>
-#include <libavutil/intreadwrite.h>
-
 #include "cc/config.h"
 
 #include "ffmpeg_common.h"
-#include "ffmpeg_c.h"
 #include "ffmpeg_cmdutils.h"
+#include "ffmpeg_c.h"
 
 #define DEFAULT_PASS_LOGFILENAME_PREFIX "ffmpeg2pass"
 
