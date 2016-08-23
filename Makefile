@@ -43,6 +43,7 @@ CPP_SOURCES := \
 	./base/memory_mapped_file_posix.cc \
 	./base/lazy_instance.cc \
 	./base/lock.cc \
+	./base/location.cc \
 	./base/command_line.cc \
 	./base/environment.cc \
 	./base/file_descriptor_shuffle.cc \
@@ -91,8 +92,8 @@ TESTS :=  \
 	./base/command_line_unittest \
 	./cc/ffmpeg_facade_unittest \
 
-#all: $(C_OBJECTS) $(APP) $(CPP_OBJECTS) $(TESTS)
-all: $(CPP_OBJECTS) $(TESTS)
+all: $(C_OBJECTS) $(APP) $(CPP_OBJECTS) $(TESTS)
+#all: $(CPP_OBJECTS) $(TESTS)
 
 
 .cc.o:

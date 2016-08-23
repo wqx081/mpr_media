@@ -15,6 +15,8 @@
 
 
 #include "base/numbers.h"
+#include "base/location.h"
+#include "cc/ffmpeg_exception.h"
 
 namespace ffmpeg {
 
@@ -135,6 +137,7 @@ base::Status ParseNumber(double& ret, const char* context, const char* str) {
 
 ///////////
 
+// wqx throw exception
 double parse_number_or_die(const char *context, const char *numstr, int type,
                            double min, double max)
 {
@@ -152,7 +155,9 @@ double parse_number_or_die(const char *context, const char *numstr, int type,
     else
         return d;
     av_log(NULL, AV_LOG_FATAL, error, context, numstr, min, max);
-    exit_program(1);
+    //exit_program(1);
+    throw FFmpegException(FROM_HERE.ToString() 
+		    + " error to parse: " + std::string(numstr));
     return 0;
 }
 
@@ -164,7 +169,9 @@ int64_t parse_time_or_die(const char *context, const char *timestr,
     if (av_parse_time(&us, timestr, is_duration) < 0) {
         av_log(NULL, AV_LOG_FATAL, "Invalid %s specification for %s: %s\n",
                is_duration ? "duration" : "date", context, timestr);
-        exit_program(1);
+        //exit_program(1);
+        throw FFmpegException(FROM_HERE.ToString() 
+		    + " error to parse: " + std::string(timestr));
     }
     return us;
 }
@@ -281,7 +288,7 @@ static int write_option(void *optctx,
         }
     }
     if (po->flags & OPT_EXIT)
-        exit_program(0);
+        exit_program(0); // TODO(wqx):
 
     return 0;
 }
@@ -319,7 +326,10 @@ int parse_option(void *optctx, const char *opt, const char *arg,
     return !!(po->flags & HAS_ARG);
 }
 
-void parse_options(void *optctx, int argc, char **argv, const OptionDef *options,
+void parse_options(void *optctx, 
+		   int argc, 
+		   char **argv, 
+		   const OptionDef *options,
                    void (*parse_arg_function)(void *, const char*))
 {
     const char *opt;
@@ -341,7 +351,9 @@ void parse_options(void *optctx, int argc, char **argv, const OptionDef *options
             opt++;
 
             if ((ret = parse_option(optctx, opt, argv[optindex], options)) < 0)
-                exit_program(1);
+                throw FFmpegException(FROM_HERE.ToString() 
+		  + " error parse option: " 
+		  + std::string(opt));//exit_program(1);
             optindex += ret;
         } else {
             if (parse_arg_function)
@@ -1982,7 +1994,9 @@ AVDictionary *filter_codec_opts(AVDictionary *opts, enum AVCodecID codec_id,
             case  0:
                 continue;
             default:
-                exit_program(1);
+                throw FFmpegException(FROM_HERE.ToString() +
+				"stream specifier must be 0 or 1");
+		//exit_program(1);
             }
 
         if (av_opt_find(&cc, t->key, NULL, flags, AV_OPT_SEARCH_FAKE_OBJ) ||

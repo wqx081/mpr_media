@@ -4,6 +4,7 @@
 #include "cc/ffmpeg_c.h"
 #include "cc/ffmpeg_cmdutils.h"
 #include "cc/ffmpeg_common.h"
+#include "cc/ffmpeg_exception.h"
 
 #include <mutex>
 
@@ -79,22 +80,53 @@ base::Status FFmpegFacade::ReadyDataIO() {
   // Open Input/Output files and FilterGraphs(filters)
   std::unique_ptr<FFmpegIO> ffmpeg_io = 
          base::MakeUnique<FFmpegIO>(ffmpeg_command_line_->GetOptionParseContext());
-  base::Status status = ffmpeg_io->OpenInputFiles();
-  if (!status.ok()) {
-    return status;
+  
+  base::Status status;
+
+  try {
+    status  = ffmpeg_io->OpenInputFiles();
+    if (!status.ok()) {
+      return status;
+    }
+  } catch (FFmpegException& e) {
+    LOG(ERROR) << "OpenInputFiles";
+    return base::Status(base::Code::INTERNAL,  
+		 std::string("OpenInputFiles: ") + e.what());
   }
-  status = ffmpeg_io->InitComplexFilters();
-  if (!status.ok()) {
-    return status;
+
+  try {
+    status = ffmpeg_io->InitComplexFilters();
+    if (!status.ok()) {
+      return status;
+    }
+  } catch (FFmpegException& e) {
+    LOG(ERROR) << "InitComplexFilters";
+    return base::Status(base::Code::INTERNAL,  
+		 std::string("InitComplexFilters: ") + e.what());
   }
-  status = ffmpeg_io->OpenOutputFiles();
-  if (!status.ok()) {
-    return status;
+
+  try {
+    status = ffmpeg_io->OpenOutputFiles();
+    if (!status.ok()) {
+      return status;
+    }
+  } catch (FFmpegException& e) {
+    LOG(ERROR) << "OpenOutputFiles";
+    return base::Status(base::Code::INTERNAL,  
+		 std::string("OpenOutputFiles: ") + e.what());
   }
-  status = ffmpeg_io->ConfigureComplexFilters();
-  if (!status.ok()) {
-    return status;
+
+  try {
+    status = ffmpeg_io->ConfigureComplexFilters();
+    if (!status.ok()) {
+      return status;
+    }
+  } catch (FFmpegException& e) {
+    LOG(ERROR) << "ConfigureComplexFilters";
+    return base::Status(base::Code::INTERNAL,  
+		 std::string("ConfigureComplexFilters: ") + e.what());
   }
+
   ///
   state_ = State::READY;
   return base::Status::OK();

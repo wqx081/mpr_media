@@ -25,12 +25,22 @@ TEST(FFmpegFacade, Create) {
   argv.push_back("libfaac");
   argv.push_back("/tmp/out.flv");
 
-  base::Status status = ffmpeg_facade->Initialize(argv);
+  base::Status status;
+  status = ffmpeg_facade->Initialize(argv);
   EXPECT_TRUE(status.ok());
 
   status = ffmpeg_facade->ReadyDataIO();
   EXPECT_TRUE(status.ok());
   
+  ffmpeg_facade->Desotry();
+
+  status = ffmpeg_facade->Initialize(argv);
+  EXPECT_TRUE(status.ok());
+
+  status = ffmpeg_facade->ReadyDataIO();
+  EXPECT_TRUE(status.ok());
+
+  ffmpeg_facade->Desotry();
 }
 
 } // namespace ffmpeg
