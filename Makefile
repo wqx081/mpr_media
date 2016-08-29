@@ -16,6 +16,16 @@ FFMPEG_LIB_FILES := \
 	-lm \
 	-lpthread
 TEST_LIB_FILES := -L/usr/local/lib -lgtest -lgtest_main -lpthread
+GRPC_LIB_FILES :=  \
+	-L/usr/local/lib -lgrpc++ -lgrpc \
+	-lgrpc++_reflection \
+	-lprotobuf -lpthread -ldl \
+
+PROTOC = protoc
+GRPC_CPP_PLUGIN=grpc_cpp_plugin
+GRPC_CPP_PLUGIN_PATH ?= `which $(GRPC_CPP_PLUGIN)`
+PROTOS_PATH = ./protos
+
 
 CXX=g++
 
@@ -61,6 +71,13 @@ CPP_SOURCES := \
 	./base/process/launch_posix.cc \
 	./base/test/multiprocess_func_list.cc \
 	\
+	\
+	./protos/transcode.pb.cc \
+	./protos/transcode.grpc.pb.cc \
+	./transcoder/ffmpeg_launch.cc \
+	./transcoder/transcode_service.cc \
+	\
+	\
 	./cc/ffmpeg_cmdutils.cc \
 	./cc/ffmpeg_opt.cc \
 	./cc/ffmpeg_filter.cc \
@@ -89,8 +106,12 @@ CC=gcc
 
 TESTS :=  \
 	./base/process/process_unittest \
+	./base/string_split_unittest \
 	./base/command_line_unittest \
 	./cc/ffmpeg_facade_unittest \
+	./transcoder/ffmpeg_launch_unittest \
+	./transcoder/transcode_client \
+	./transcoder/transcode_service_server \
 
 all: $(C_OBJECTS) $(APP) $(CPP_OBJECTS) $(TESTS)
 #all: $(CPP_OBJECTS) $(TESTS)
@@ -108,6 +129,28 @@ $(APP): ./c/ffmpeg.o
 	@echo "  [CC]  $@"
 	@$(CC) $(CFLAGS) $@ $<
 
+./transcoder/transcode_client: ./transcoder/transcode_client.o
+	@echo "  [LINK] $@"
+	@$(CXX) -o $@ $< $(CPP_OBJECTS) $(GRPC_LIB_FILES) $(BASE_LIB_FILES) $(FFMPEG_LIB_FILES)
+./transcoder/transcode_client.o: ./transcoder/transcode_client.cc
+	@echo "  [CXX]  $@"
+	@$(CXX) $(CXXFLAGS) $@ $<
+
+./transcoder/transcode_service_server: ./transcoder/transcode_service_server.o
+	@echo "  [LINK] $@"
+	@$(CXX) -o $@ $< $(CPP_OBJECTS) $(GRPC_LIB_FILES) $(BASE_LIB_FILES) $(FFMPEG_LIB_FILES)
+./transcoder/transcode_service_server.o: ./transcoder/transcode_service_server.cc
+	@echo "  [CXX]  $@"
+	@$(CXX) $(CXXFLAGS) $@ $<
+
+
+
+./base/string_split_unittest: ./base/string_split_unittest.o
+	@echo "  [LINK] $@"
+	@$(CXX) -o $@ $< $(CPP_OBJECTS) $(BASE_LIB_FILES) $(TEST_LIB_FILES) $(FFMPEG_LIB_FILES)
+./base/string_split_unittest.o: ./base/string_split_unittest.cc
+	@echo "  [CXX]  $@"
+	@$(CXX) $(CXXFLAGS) $@ $<
 
 ./base/command_line_unittest: ./base/command_line_unittest.o
 	@echo "  [LINK] $@"
@@ -129,6 +172,28 @@ $(APP): ./c/ffmpeg.o
 ./cc/ffmpeg_facade_unittest.o: ./cc/ffmpeg_facade_unittest.cc
 	@echo "  [CXX]  $@"
 	@$(CXX) $(CXXFLAGS) $@ $<
+
+./transcoder/ffmpeg_launch_unittest: ./transcoder/ffmpeg_launch_unittest.o
+	@echo "  [LINK] $@"
+	@$(CXX) -o $@ $< $(CPP_OBJECTS) $(GRPC_LIB_FILES) $(BASE_LIB_FILES) $(TEST_LIB_FILES) $(FFMPEG_LIB_FILES)
+./transcoder/ffmpeg_launch_unittest.o: ./transcoder/ffmpeg_launch_unittest.cc
+	@echo "  [CXX]  $@"
+	@$(CXX) $(CXXFLAGS) $@ $<
+
+############
+
+vpath %.proto $(PROTOS_PATH)
+
+.PRECIOUS: %.grpc.pb.cc
+%.grpc.pb.cc: %.proto
+	@echo "  [GEN]  $@"
+	@$(PROTOC) -I $(PROTOS_PATH) --grpc_out=$(PROTOS_PATH) --plugin=protoc-gen-grpc=$(GRPC_CPP_PLUGIN_PATH) $<
+
+.PRECIOUS: %.pb.cc
+%.pb.cc: %.proto
+	@echo "  [GEN]  $@"
+	@$(PROTOC) -I $(PROTOS_PATH) --cpp_out=$(PROTOS_PATH) $<
+
 
 clean:
 	rm -fr media/*.o
