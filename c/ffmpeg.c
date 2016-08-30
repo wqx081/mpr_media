@@ -1528,6 +1528,11 @@ static void print_report(int is_last_report, int64_t timer_start, int64_t cur_ti
         float q = -1;
         ost = output_streams[i];
         enc = ost->enc_ctx;
+        //wqx
+        int source_input_stream_index = ost->source_index;
+        int source_input_file_index = input_streams[source_input_stream_index]->file_index;
+        int64_t input_file_duration = input_files[source_input_file_index]->ctx->duration;
+
         if (!ost->stream_copy)
             q = ost->quality / (float) FF_QP2LAMBDA;
 
@@ -1536,13 +1541,19 @@ static void print_report(int is_last_report, int64_t timer_start, int64_t cur_ti
             av_bprintf(&buf_script, "stream_%d_%d_q=%.1f\n",
                        ost->file_index, ost->index, q);
         }
+
         if (!vid && enc->codec_type == AVMEDIA_TYPE_VIDEO) {
             float fps;
 
             frame_number = ost->frame_number;
             fps = t > 1 ? frame_number / t : 0;
-            snprintf(buf + strlen(buf), sizeof(buf) - strlen(buf), "frame=%5d fps=%3.*f q=%3.1f ",
-                     frame_number, fps < 9.95, fps, q);
+
+            snprintf(buf + strlen(buf), sizeof(buf) - strlen(buf), 
+                     "duration=%16ld;frame=%5d;fps=%3.*f;q=%3.1f;",
+                     input_file_duration, frame_number, fps < 9.95, fps, q);
+
+            
+            av_bprintf(&buf_script, "ifile_duration=%ld\n", input_file_duration);
             av_bprintf(&buf_script, "frame=%d\n", frame_number);
             av_bprintf(&buf_script, "fps=%.1f\n", fps);
             av_bprintf(&buf_script, "stream_%d_%d_q=%.1f\n",
@@ -1608,9 +1619,9 @@ static void print_report(int is_last_report, int64_t timer_start, int64_t cur_ti
     speed = t != 0.0 ? (double)pts / AV_TIME_BASE / t : -1;
 
     if (total_size < 0) snprintf(buf + strlen(buf), sizeof(buf) - strlen(buf),
-                                 "size=N/A time=");
+                                 "size=N/A;time=");
     else                snprintf(buf + strlen(buf), sizeof(buf) - strlen(buf),
-                                 "size=%8.0fkB time=", total_size / 1024.0);
+                                 "size=%8.0fkB;time=", total_size / 1024.0);
     if (pts < 0)
         snprintf(buf + strlen(buf), sizeof(buf) - strlen(buf), "-");
     snprintf(buf + strlen(buf), sizeof(buf) - strlen(buf),
@@ -1618,30 +1629,37 @@ static void print_report(int is_last_report, int64_t timer_start, int64_t cur_ti
              (100 * us) / AV_TIME_BASE);
 
     if (bitrate < 0) {
-        snprintf(buf + strlen(buf), sizeof(buf) - strlen(buf),"bitrate=N/A");
+        snprintf(buf + strlen(buf), sizeof(buf) - strlen(buf),";bitrate=N/A");
         av_bprintf(&buf_script, "bitrate=N/A\n");
     }else{
-        snprintf(buf + strlen(buf), sizeof(buf) - strlen(buf),"bitrate=%6.1fkbits/s", bitrate);
+        snprintf(buf + strlen(buf), sizeof(buf) - strlen(buf),";bitrate=%6.1fkbits/s", bitrate);
         av_bprintf(&buf_script, "bitrate=%6.1fkbits/s\n", bitrate);
     }
 
-    if (total_size < 0) av_bprintf(&buf_script, "total_size=N/A\n");
-    else                av_bprintf(&buf_script, "total_size=%"PRId64"\n", total_size);
+    if (total_size < 0) 
+        av_bprintf(&buf_script, "total_size=N/A\n");
+    else                
+        av_bprintf(&buf_script, "total_size=%"PRId64"\n", total_size);
+
+    //wqx 
+    snprintf(buf + strlen(buf), sizeof(buf) - strlen(buf), ";out_time_ms=%"PRId64"\n",
+             pts);
+
     av_bprintf(&buf_script, "out_time_ms=%"PRId64"\n", pts);
     av_bprintf(&buf_script, "out_time=%02d:%02d:%02d.%06d\n",
                hours, mins, secs, us);
 
     if (nb_frames_dup || nb_frames_drop)
-        snprintf(buf + strlen(buf), sizeof(buf) - strlen(buf), " dup=%d drop=%d",
+        snprintf(buf + strlen(buf), sizeof(buf) - strlen(buf), ";dup=%d ;drop=%d",
                 nb_frames_dup, nb_frames_drop);
-    av_bprintf(&buf_script, "dup_frames=%d\n", nb_frames_dup);
-    av_bprintf(&buf_script, "drop_frames=%d\n", nb_frames_drop);
+    av_bprintf(&buf_script, ";dup_frames=%d\n", nb_frames_dup);
+    av_bprintf(&buf_script, ";drop_frames=%d\n", nb_frames_drop);
 
     if (speed < 0) {
-        snprintf(buf + strlen(buf), sizeof(buf) - strlen(buf)," speed=N/A");
+        snprintf(buf + strlen(buf), sizeof(buf) - strlen(buf),";speed=N/A");
         av_bprintf(&buf_script, "speed=N/A\n");
     } else {
-        snprintf(buf + strlen(buf), sizeof(buf) - strlen(buf)," speed=%4.3gx", speed);
+        snprintf(buf + strlen(buf), sizeof(buf) - strlen(buf),";speed=%4.3gx", speed);
         av_bprintf(&buf_script, "speed=%4.3gx\n", speed);
     }
 
@@ -4332,6 +4350,14 @@ int main(int argc, char **argv)
 //         av_log(NULL, AV_LOG_FATAL, "At least one input file must be specified\n");
 //         exit_program(1);
 //     }
+
+#if 0
+    int i = 0;
+    for (i = 0; i < nb_input_files; ++i) {
+      int64_t duration = input_files[i]->ctx->duration;;
+      fprintf(stderr, "duration=%ld\n", duration);
+    }
+#endif
 
     current_time = ti = getutime();
     if (transcode() < 0)

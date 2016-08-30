@@ -11,6 +11,8 @@
 
 #include "base/eintr_wrapper.h"
 #include "base/test/multiprocess_func_list.h"
+#include "base/string_split.h"
+#include "base/string_util.h"
 
 #include <gtest/gtest.h>
 #include <glog/logging.h>
@@ -333,10 +335,10 @@ TEST_F(ProcessUtilTest, FFmpeg) {
 
   base::EnvironmentMap env_changes;
 
-//  int fds[2];
-//  DCHECK(pipe(fds) == 0);
+int fds[2];
+DCHECK(pipe(fds) == 0);
 
-//  fds_to_remap.push_back(std::make_pair(fds[1], 1));
+fds_to_remap.push_back(std::make_pair(fds[1], 1));
   base::LaunchOptions options;
 //  options.wait = true;
   options.clone_flags = 0;
@@ -346,20 +348,47 @@ TEST_F(ProcessUtilTest, FFmpeg) {
   // LauchProcess
   base::Process process = base::LaunchProcess(argv, options);
   EXPECT_TRUE(process.IsValid());
-  int child_exit_code = 0;
-  CHECK(process.WaitForExit(&child_exit_code));
-  LOG(INFO) << "--------child_exit_code: " << child_exit_code;
+//  int child_exit_code = 0;
+//  CHECK(process.WaitForExit(&child_exit_code));
+//  LOG(INFO) << "--------child_exit_code: " << child_exit_code;
 
-#if 0
   PCHECK(IGNORE_EINTR(close(fds[1])) == 0);
 
-  char buf[10];
+  char buf[1024] = {0};
   ssize_t n = 0;
+  std::string remain = "";
+  std::string input;
   do {
-    n = HANDLE_EINTR(read(fds[0], buf, sizeof(buf)));
-    LOG(INFO) << "get from ffmpeg: " << std::string(buf, n);
+    n = HANDLE_EINTR(read(fds[0], buf, 1024));
+    std::string str(buf, n);
+    auto pos = str.find_last_of('\n');
+    if (pos == std::string::npos) {
+      remain += str;
+    } else {
+      input = remain + str.substr(0, pos);
+      std::vector<std::string> result = base::SplitString(input,
+                                                          "\n",
+                                                          TRIM_WHITESPACE,
+                                                          SPLIT_WANT_ALL);
+      remain = "";
+      for (size_t i=0; i < result.size(); ++i) {
+        LOG(INFO) << "get from ffmpeg: " << result[i] << "\n";
+        base::StringPairs kv_pairs;
+        base::SplitStringIntoKeyValuePairs(result[i],
+                                           '=',
+                                           ';',
+                                           &kv_pairs);
+        for (auto kv : kv_pairs) {
+          base::TrimWhitespaceASCII(kv.first, base::TRIM_ALL, &kv.first);
+          base::TrimWhitespaceASCII(kv.second, base::TRIM_ALL, &kv.second);
+          LOG(INFO) << kv.first << "," << kv.second;
+        }
+      }
+    }
   } while (n != -1 && n != 0);
-
   PCHECK(IGNORE_EINTR(close(fds[0])) == 0);
-#endif
+  // Done
+  int child_exit_code = 1024;
+  DCHECK(process.WaitForExit(&child_exit_code));
+  LOG(INFO) << "child_exit_code: " << child_exit_code;
 }

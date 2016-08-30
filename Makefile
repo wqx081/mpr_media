@@ -105,13 +105,13 @@ CC=gcc
 	@$(CC) $(CFLAGS) $@ $<
 
 TESTS :=  \
-	./base/process/process_unittest \
+	./transcoder/transcode_client \
+	./transcoder/transcode_service_server \
+	./transcoder/ffmpeg_launch_unittest \
+#	./base/process/process_unittest \
 	./base/string_split_unittest \
 	./base/command_line_unittest \
 	./cc/ffmpeg_facade_unittest \
-	./transcoder/ffmpeg_launch_unittest \
-	./transcoder/transcode_client \
-	./transcoder/transcode_service_server \
 
 all: $(C_OBJECTS) $(APP) $(CPP_OBJECTS) $(TESTS)
 #all: $(CPP_OBJECTS) $(TESTS)
